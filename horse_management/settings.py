@@ -28,14 +28,23 @@ SECRET_KEY = env('SECRET_KEY', default='django-insecure-change-this-in-productio
 DEBUG = env('DEBUG', default=True)
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', '.vercel.app'])
-CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=['http://localhost:8000'])
+CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[
+    'http://localhost:8000',
+    'https://*.vercel.app',
+])
 
-# Auto-add Vercel deployment URL
+# Auto-add Vercel deployment URLs
 VERCEL_URL = os.environ.get('VERCEL_URL')
 if VERCEL_URL:
     if VERCEL_URL not in ALLOWED_HOSTS:
         ALLOWED_HOSTS.append(VERCEL_URL)
     CSRF_TRUSTED_ORIGINS.append(f'https://{VERCEL_URL}')
+
+VERCEL_PRODUCTION_URL = os.environ.get('VERCEL_PROJECT_PRODUCTION_URL')
+if VERCEL_PRODUCTION_URL:
+    if VERCEL_PRODUCTION_URL not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(VERCEL_PRODUCTION_URL)
+    CSRF_TRUSTED_ORIGINS.append(f'https://{VERCEL_PRODUCTION_URL}')
 
 # Application definition
 INSTALLED_APPS = [
