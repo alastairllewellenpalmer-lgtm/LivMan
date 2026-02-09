@@ -19,8 +19,8 @@ from .models import (
 
 @admin.register(Owner)
 class OwnerAdmin(admin.ModelAdmin):
-    list_display = ['name', 'email', 'phone', 'active_horse_count', 'created_at']
-    search_fields = ['name', 'email', 'phone']
+    list_display = ['name', 'email', 'phone', 'account_code', 'active_horse_count', 'created_at']
+    search_fields = ['name', 'email', 'phone', 'account_code']
     list_filter = ['created_at']
     readonly_fields = ['created_at', 'updated_at']
 
@@ -82,7 +82,7 @@ class PlacementAdmin(admin.ModelAdmin):
 
 @admin.register(BusinessSettings)
 class BusinessSettingsAdmin(admin.ModelAdmin):
-    list_display = ['business_name', 'email', 'phone', 'default_payment_terms']
+    list_display = ['business_name', 'email', 'phone', 'website', 'vat_registration', 'default_payment_terms']
 
     def has_add_permission(self, request):
         # Only allow one instance

@@ -9,6 +9,7 @@
             <h1 class="text-2xl font-bold leading-7 text-gray-900">Invoices</h1>
         </div>
         <div class="mt-4 flex space-x-3 md:ml-4 md:mt-0">
+            <a href="{% url 'invoice_export_csv' %}?{{ request.GET.urlencode }}" class="btn btn-secondary">Export CSV</a>
             <a href="{% url 'invoice_generate' %}" class="btn btn-secondary">Generate Monthly</a>
             <a href="{% url 'invoice_create' %}" class="btn btn-primary">Create Invoice</a>
         </div>

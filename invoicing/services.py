@@ -16,6 +16,7 @@ from core.models import (
     Owner,
     Placement,
 )
+from .utils import format_date_short, format_date_short_year, group_preview_charges_by_horse
 
 
 class DuplicateInvoiceError(Exception):
@@ -58,10 +59,21 @@ class InvoiceService:
             days = placement.get_days_in_period(period_start, period_end)
             if days > 0:
                 amount = placement.calculate_charge(period_start, period_end)
+                eff_start, eff_end = placement.get_effective_dates_in_period(
+                    period_start, period_end
+                )
+                # Rich description: "Grass Livery incl hay £5 per day - 59 days (6 Nov to 3 Jan 2026)"
+                rate_str = f"£{placement.daily_rate:g}"
+                date_from = format_date_short(eff_start)
+                date_to = format_date_short_year(eff_end)
+                description = (
+                    f"{placement.rate_type.name} {rate_str} per day "
+                    f"- {days} days ({date_from} to {date_to})"
+                )
                 charges.append({
                     'horse': placement.horse,
                     'placement': placement,
-                    'description': f"{placement.horse.name} - {placement.rate_type.name} at {placement.location.name}",
+                    'description': description,
                     'days': days,
                     'daily_rate': placement.daily_rate,
                     'amount': amount,
@@ -83,7 +95,8 @@ class InvoiceService:
             {
                 'horse': charge.horse,
                 'charge': charge,
-                'description': f"{charge.horse.name} - {charge.get_charge_type_display()}: {charge.description}",
+                'description': f"{charge.get_charge_type_display()} - {charge.description}",
+                'date': charge.date,
                 'days': 1,
                 'daily_rate': charge.amount,
                 'amount': charge.amount,
@@ -100,11 +113,13 @@ class InvoiceService:
 
         all_charges = livery_charges + extra_charges
         subtotal = sum(c['amount'] for c in all_charges)
+        horse_groups = group_preview_charges_by_horse(all_charges)
 
         return {
             'livery_charges': livery_charges,
             'extra_charges': extra_charges,
             'all_charges': all_charges,
+            'horse_groups': horse_groups,
             'subtotal': subtotal,
             'total': subtotal,  # No tax for now
         }

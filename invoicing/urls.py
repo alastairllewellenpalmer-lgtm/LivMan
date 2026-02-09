@@ -14,6 +14,8 @@ urlpatterns = [
     path('<int:pk>/', views.InvoiceDetailView.as_view(), name='invoice_detail'),
     path('<int:pk>/edit/', views.InvoiceUpdateView.as_view(), name='invoice_update'),
     path('<int:pk>/pdf/', views.invoice_pdf, name='invoice_pdf'),
+    path('<int:pk>/csv/', views.invoice_csv, name='invoice_csv'),
     path('<int:pk>/send/', views.invoice_send, name='invoice_send'),
     path('<int:pk>/mark-paid/', views.invoice_mark_paid, name='invoice_mark_paid'),
+    path('export-csv/', views.invoice_export_csv, name='invoice_export_csv'),
 ]

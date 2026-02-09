@@ -18,6 +18,11 @@ class Owner(models.Model):
     email = models.EmailField(blank=True)
     phone = models.CharField(max_length=50, blank=True)
     address = models.TextField(blank=True)
+    account_code = models.CharField(
+        max_length=20,
+        blank=True,
+        help_text="Account code for accounting systems (e.g. Xero)"
+    )
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -240,11 +245,15 @@ class Placement(models.Model):
     def daily_rate(self):
         return self.rate_type.daily_rate
 
-    def get_days_in_period(self, period_start, period_end):
-        """Calculate billable days within a billing period."""
-        # Determine effective start and end dates
+    def get_effective_dates_in_period(self, period_start, period_end):
+        """Return (effective_start, effective_end) tuple for a billing period."""
         effective_start = max(self.start_date, period_start)
         effective_end = min(self.end_date or period_end, period_end)
+        return (effective_start, effective_end)
+
+    def get_days_in_period(self, period_start, period_end):
+        """Calculate billable days within a billing period."""
+        effective_start, effective_end = self.get_effective_dates_in_period(period_start, period_end)
 
         if effective_start > effective_end:
             return 0
@@ -264,8 +273,19 @@ class BusinessSettings(models.Model):
     address = models.TextField(blank=True)
     phone = models.CharField(max_length=50, blank=True)
     email = models.EmailField(blank=True)
+    website = models.URLField(blank=True)
+    vat_registration = models.CharField(
+        max_length=50,
+        blank=True,
+        default="N/A",
+        help_text="VAT registration number, or N/A if not registered"
+    )
     logo = models.ImageField(upload_to='business/', blank=True, null=True)
     bank_details = models.TextField(blank=True, help_text="Bank details for payment")
+    card_payment_url = models.URLField(
+        blank=True,
+        help_text="URL for online card payment (e.g. SumUp link)"
+    )
     default_payment_terms = models.PositiveIntegerField(
         default=30,
         help_text="Default payment terms in days"

@@ -2,6 +2,7 @@
 Views for invoicing app.
 """
 
+import io
 from datetime import timedelta
 
 from django.contrib import messages
@@ -18,6 +19,7 @@ from core.models import Invoice, Owner
 from .forms import InvoiceCreateForm, InvoiceUpdateForm, MonthlyInvoiceForm
 from .pdf import generate_invoice_pdf
 from .services import DuplicateInvoiceError, InvoiceService
+from .utils import group_line_items_by_horse, write_xero_csv
 
 
 class InvoiceListView(LoginRequiredMixin, ListView):
@@ -53,9 +55,11 @@ class InvoiceDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['line_items'] = self.object.line_items.select_related(
-            'placement'
+        line_items = self.object.line_items.select_related(
+            'horse', 'placement', 'charge'
         ).order_by('line_type', 'description')
+        context['line_items'] = line_items
+        context['horse_groups'] = group_line_items_by_horse(line_items)
         return context
 
 
@@ -228,3 +232,54 @@ def invoice_generate_monthly(request):
     return render(request, 'invoicing/invoice_generate.html', {
         'form': form,
     })
+
+
+@login_required
+def invoice_csv(request, pk):
+    """Download a single invoice as Xero-compatible CSV."""
+    invoice = get_object_or_404(Invoice, pk=pk)
+
+    output = io.StringIO()
+    write_xero_csv(invoice, output)
+
+    response = HttpResponse(output.getvalue(), content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{invoice.invoice_number}.csv"'
+    return response
+
+
+@login_required
+def invoice_export_csv(request):
+    """Bulk export invoices as Xero-compatible CSV."""
+    queryset = Invoice.objects.select_related('owner').order_by('-created_at')
+
+    status = request.GET.get('status')
+    if status:
+        queryset = queryset.filter(status=status)
+
+    owner = request.GET.get('owner')
+    if owner:
+        queryset = queryset.filter(owner_id=owner)
+
+    date_from = request.GET.get('date_from')
+    if date_from:
+        from datetime import datetime
+        try:
+            queryset = queryset.filter(period_start__gte=datetime.strptime(date_from, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+
+    date_to = request.GET.get('date_to')
+    if date_to:
+        from datetime import datetime
+        try:
+            queryset = queryset.filter(period_end__lte=datetime.strptime(date_to, '%Y-%m-%d').date())
+        except ValueError:
+            pass
+
+    output = io.StringIO()
+    write_xero_csv(list(queryset), output)
+
+    today = timezone.now().strftime('%Y-%m-%d')
+    response = HttpResponse(output.getvalue(), content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="invoices-export-{today}.csv"'
+    return response
