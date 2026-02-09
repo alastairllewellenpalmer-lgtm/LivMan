@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+
+{% block title %}Generate Monthly Invoices - Horse Management{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto">
+    <div class="md:flex md:items-center md:justify-between mb-6">
+        <div class="min-w-0 flex-1">
+            <h1 class="text-2xl font-bold leading-7 text-gray-900">Generate Monthly Invoices</h1>
+            <p class="mt-1 text-sm text-gray-500">Generate invoices for all owners with active placements</p>
+        </div>
+    </div>
+
+    <div class="bg-white shadow rounded-lg">
+        <form method="post" class="p-6 space-y-6">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="id_year" class="block text-sm font-medium text-gray-700">Year</label>
+                    {{ form.year }}
+                </div>
+                <div>
+                    <label for="id_month" class="block text-sm font-medium text-gray-700">Month</label>
+                    {{ form.month }}
+                </div>
+            </div>
+
+            <div class="rounded-md bg-yellow-50 p-4">
+                <p class="text-sm text-yellow-700">
+                    This will create invoices for all owners with horses during the selected month.
+                    Each invoice will include livery charges and any unbilled extra charges.
+                </p>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-6 border-t">
+                <a href="{% url 'invoice_list' %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Generate Invoices</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

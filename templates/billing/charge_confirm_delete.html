@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+{% block title %}Delete Charge - Horse Management{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto">
+    <div class="bg-white shadow rounded-lg p-6">
+        <h1 class="text-xl font-bold text-gray-900 mb-4">Delete Charge</h1>
+        <p class="text-gray-600 mb-6">
+            Are you sure you want to delete this charge?
+        </p>
+        <div class="bg-gray-50 rounded p-4 mb-6">
+            <p class="font-medium">{{ object.horse.name }}</p>
+            <p class="text-sm text-gray-500">{{ object.description }}</p>
+            <p class="text-sm text-gray-500">{{ object.date }} - {{ object.amount|floatformat:2 }}</p>
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            <div class="flex justify-end space-x-3">
+                <a href="{% url 'charge_list' %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-danger">Delete</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

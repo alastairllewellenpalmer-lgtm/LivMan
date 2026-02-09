@@ -1,0 +1,202 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ horse.name }} - Horse Management{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="md:flex md:items-center md:justify-between">
+        <div class="min-w-0 flex-1">
+            <h1 class="text-2xl font-bold leading-7 text-gray-900">{{ horse.name }}</h1>
+            <p class="mt-1 text-sm text-gray-500">
+                {% if horse.age %}{{ horse.age }}yo{% endif %}
+                {{ horse.get_color_display }}
+                {{ horse.get_sex_display }}
+            </p>
+        </div>
+        <div class="mt-4 flex space-x-3 md:ml-4 md:mt-0">
+            <a href="{% url 'horse_move' horse.pk %}" class="btn btn-success">Move Horse</a>
+            <a href="{% url 'horse_update' horse.pk %}" class="btn btn-secondary">Edit</a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Main Info -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Current Placement -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 border-b border-gray-200 sm:px-6">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Current Placement</h3>
+                </div>
+                <div class="px-4 py-5 sm:p-6">
+                    {% if horse.current_placement %}
+                    <dl class="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Location</dt>
+                            <dd class="mt-1 text-sm text-gray-900">
+                                <a href="{% url 'location_detail' horse.current_placement.location.pk %}" class="text-indigo-600 hover:text-indigo-500">
+                                    {{ horse.current_placement.location.name }}
+                                </a>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Owner</dt>
+                            <dd class="mt-1 text-sm text-gray-900">
+                                <a href="{% url 'owner_detail' horse.current_placement.owner.pk %}" class="text-indigo-600 hover:text-indigo-500">
+                                    {{ horse.current_placement.owner.name }}
+                                </a>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Rate</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ horse.current_placement.rate_type.name }} (&pound;{{ horse.current_placement.rate_type.daily_rate }}/day)</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Arrived</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ horse.current_placement.start_date }}</dd>
+                        </div>
+                    </dl>
+                    {% else %}
+                    <p class="text-gray-500">No current placement</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Horse Details -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 border-b border-gray-200 sm:px-6">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Details</h3>
+                </div>
+                <div class="px-4 py-5 sm:p-6">
+                    <dl class="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
+                        {% if horse.breeding %}
+                        <div class="sm:col-span-2">
+                            <dt class="text-sm font-medium text-gray-500">Breeding</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ horse.breeding }}</dd>
+                        </div>
+                        {% endif %}
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Passport</dt>
+                            <dd class="mt-1 text-sm text-gray-900">
+                                {% if horse.has_passport %}
+                                    {% if horse.passport_number %}{{ horse.passport_number }}{% else %}Yes{% endif %}
+                                {% else %}
+                                    <span class="text-red-600">No passport</span>
+                                {% endif %}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Status</dt>
+                            <dd class="mt-1">
+                                {% if horse.is_active %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>
+                                {% else %}
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Inactive</span>
+                                {% endif %}
+                            </dd>
+                        </div>
+                        {% if horse.notes %}
+                        <div class="sm:col-span-2">
+                            <dt class="text-sm font-medium text-gray-500">Notes</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ horse.notes }}</dd>
+                        </div>
+                        {% endif %}
+                    </dl>
+                </div>
+            </div>
+
+            <!-- Placement History -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 border-b border-gray-200 sm:px-6">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Placement History</h3>
+                </div>
+                <ul class="divide-y divide-gray-200">
+                    {% for placement in placements %}
+                    <li class="px-4 py-4 sm:px-6">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-gray-900">{{ placement.location.name }}</p>
+                                <p class="text-sm text-gray-500">Owner: {{ placement.owner.name }}</p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-sm text-gray-900">{{ placement.start_date }} - {% if placement.end_date %}{{ placement.end_date }}{% else %}Present{% endif %}</p>
+                                <p class="text-sm text-gray-500">&pound;{{ placement.rate_type.daily_rate }}/day</p>
+                            </div>
+                        </div>
+                    </li>
+                    {% empty %}
+                    <li class="px-4 py-4 text-gray-500 text-sm">No placement history</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="space-y-6">
+            <!-- Quick Actions -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 border-b border-gray-200 sm:px-6">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Quick Actions</h3>
+                </div>
+                <div class="px-4 py-5 sm:p-6 space-y-3">
+                    <a href="{% url 'vaccination_create' %}?horse={{ horse.pk }}" class="block w-full btn btn-secondary text-center">
+                        Add Vaccination
+                    </a>
+                    <a href="{% url 'farrier_create' %}?horse={{ horse.pk }}" class="block w-full btn btn-secondary text-center">
+                        Add Farrier Visit
+                    </a>
+                    <a href="{% url 'charge_create' %}?horse={{ horse.pk }}" class="block w-full btn btn-secondary text-center">
+                        Add Charge
+                    </a>
+                </div>
+            </div>
+
+            <!-- Recent Vaccinations -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 border-b border-gray-200 sm:px-6">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Vaccinations</h3>
+                </div>
+                <ul class="divide-y divide-gray-200">
+                    {% for vax in vaccinations %}
+                    <li class="px-4 py-3">
+                        <div class="flex justify-between">
+                            <span class="text-sm font-medium text-gray-900">{{ vax.vaccination_type.name }}</span>
+                            <span class="text-sm text-gray-500">{{ vax.date_given }}</span>
+                        </div>
+                        <p class="text-xs {% if vax.is_overdue %}text-red-600{% elif vax.is_due_soon %}text-orange-600{% else %}text-gray-500{% endif %}">
+                            Next: {{ vax.next_due_date }}
+                        </p>
+                    </li>
+                    {% empty %}
+                    <li class="px-4 py-3 text-gray-500 text-sm">No vaccinations recorded</li>
+                    {% endfor %}
+                </ul>
+            </div>
+
+            <!-- Recent Farrier -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 border-b border-gray-200 sm:px-6">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Farrier Visits</h3>
+                </div>
+                <ul class="divide-y divide-gray-200">
+                    {% for visit in farrier_visits %}
+                    <li class="px-4 py-3">
+                        <div class="flex justify-between">
+                            <span class="text-sm font-medium text-gray-900">{{ visit.get_work_done_display }}</span>
+                            <span class="text-sm text-gray-500">{{ visit.date }}</span>
+                        </div>
+                        {% if visit.next_due_date %}
+                        <p class="text-xs {% if visit.is_overdue %}text-red-600{% elif visit.is_due_soon %}text-orange-600{% else %}text-gray-500{% endif %}">
+                            Next: {{ visit.next_due_date }}
+                        </p>
+                        {% endif %}
+                    </li>
+                    {% empty %}
+                    <li class="px-4 py-3 text-gray-500 text-sm">No farrier visits recorded</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

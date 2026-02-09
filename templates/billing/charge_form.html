@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if object %}Edit Charge{% else %}Add Charge{% endif %} - Horse Management{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="md:flex md:items-center md:justify-between mb-6">
+        <div class="min-w-0 flex-1">
+            <h1 class="text-2xl font-bold leading-7 text-gray-900">
+                {% if object %}Edit Charge{% else %}Add Charge{% endif %}
+            </h1>
+        </div>
+    </div>
+
+    <div class="bg-white shadow rounded-lg">
+        <form method="post" enctype="multipart/form-data" class="p-6 space-y-6">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div>
+                    <label for="id_horse" class="block text-sm font-medium text-gray-700">Horse *</label>
+                    {{ form.horse }}
+                </div>
+
+                <div>
+                    <label for="id_owner" class="block text-sm font-medium text-gray-700">Bill To (Owner) *</label>
+                    {{ form.owner }}
+                </div>
+
+                <div>
+                    <label for="id_charge_type" class="block text-sm font-medium text-gray-700">Type *</label>
+                    {{ form.charge_type }}
+                </div>
+
+                <div>
+                    <label for="id_date" class="block text-sm font-medium text-gray-700">Date *</label>
+                    {{ form.date }}
+                </div>
+
+                <div>
+                    <label for="id_service_provider" class="block text-sm font-medium text-gray-700">Service Provider</label>
+                    {{ form.service_provider }}
+                </div>
+
+                <div>
+                    <label for="id_amount" class="block text-sm font-medium text-gray-700">Amount *</label>
+                    {{ form.amount }}
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label for="id_description" class="block text-sm font-medium text-gray-700">Description *</label>
+                    {{ form.description }}
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label for="id_receipt_image" class="block text-sm font-medium text-gray-700">Receipt Image</label>
+                    {{ form.receipt_image }}
+                    {% if object.receipt_image %}
+                    <p class="mt-1 text-sm text-gray-500">
+                        Current: <a href="{{ object.receipt_image.url }}" target="_blank" class="text-indigo-600">View</a>
+                    </p>
+                    {% endif %}
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label for="id_notes" class="block text-sm font-medium text-gray-700">Notes</label>
+                    {{ form.notes }}
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-6 border-t">
+                <a href="{% url 'charge_list' %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    {% if object %}Save Changes{% else %}Add Charge{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

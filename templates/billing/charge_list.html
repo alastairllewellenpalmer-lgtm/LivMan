@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block title %}Extra Charges - Horse Management{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="md:flex md:items-center md:justify-between">
+        <div class="min-w-0 flex-1">
+            <h1 class="text-2xl font-bold leading-7 text-gray-900">Extra Charges</h1>
+        </div>
+        <div class="mt-4 flex space-x-3 md:ml-4 md:mt-0">
+            <a href="{% url 'provider_list' %}" class="btn btn-secondary">Providers</a>
+            <a href="{% url 'charge_create' %}" class="btn btn-primary">Add Charge</a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white shadow rounded-lg p-4">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Invoiced</label>
+                <select name="invoiced" class="form-select">
+                    <option value="">All</option>
+                    <option value="no" {% if request.GET.invoiced == 'no' %}selected{% endif %}>Unbilled</option>
+                    <option value="yes" {% if request.GET.invoiced == 'yes' %}selected{% endif %}>Invoiced</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Type</label>
+                <select name="type" class="form-select">
+                    <option value="">All types</option>
+                    {% for value, label in charge_types %}
+                    <option value="{{ value }}" {% if request.GET.type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Horse</label>
+                <select name="horse" class="form-select">
+                    <option value="">All horses</option>
+                    {% for h in horses %}
+                    <option value="{{ h.pk }}" {% if request.GET.horse == h.pk|stringformat:"s" %}selected{% endif %}>{{ h.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Owner</label>
+                <select name="owner" class="form-select">
+                    <option value="">All owners</option>
+                    {% for o in owners %}
+                    <option value="{{ o.pk }}" {% if request.GET.owner == o.pk|stringformat:"s" %}selected{% endif %}>{{ o.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex items-end space-x-2">
+                <button type="submit" class="btn btn-secondary">Filter</button>
+                <a href="{% url 'charge_list' %}" class="btn btn-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Charge List -->
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Horse</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Owner</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for charge in charges %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ charge.date }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <a href="{% url 'horse_detail' charge.horse.pk %}" class="text-indigo-600 hover:text-indigo-900">
+                            {{ charge.horse.name }}
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <a href="{% url 'owner_detail' charge.owner.pk %}" class="hover:text-indigo-600">
+                            {{ charge.owner.name }}
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                            {% if charge.charge_type == 'vet' %}bg-red-100 text-red-800
+                            {% elif charge.charge_type == 'farrier' %}bg-yellow-100 text-yellow-800
+                            {% elif charge.charge_type == 'feed' %}bg-green-100 text-green-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ charge.get_charge_type_display }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-900">{{ charge.description|truncatewords:10 }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right font-medium">&pound;{{ charge.amount|floatformat:2 }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if charge.invoiced %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            Invoiced
+                        </span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                            Unbilled
+                        </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                        <a href="{% url 'charge_update' charge.pk %}" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                        {% if not charge.invoiced %}
+                        <a href="{% url 'charge_delete' charge.pk %}" class="text-red-600 hover:text-red-900">Delete</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="8" class="px-6 py-4 text-center text-gray-500">No charges found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

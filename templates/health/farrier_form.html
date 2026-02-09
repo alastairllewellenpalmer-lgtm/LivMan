@@ -1,0 +1,67 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if object %}Edit Farrier Visit{% else %}Add Farrier Visit{% endif %} - Horse Management{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="md:flex md:items-center md:justify-between mb-6">
+        <div class="min-w-0 flex-1">
+            <h1 class="text-2xl font-bold leading-7 text-gray-900">
+                {% if object %}Edit Farrier Visit{% else %}Add Farrier Visit{% endif %}
+            </h1>
+        </div>
+    </div>
+
+    <div class="bg-white shadow rounded-lg">
+        <form method="post" class="p-6 space-y-6">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                    <label for="id_horse" class="block text-sm font-medium text-gray-700">Horse *</label>
+                    {{ form.horse }}
+                </div>
+
+                <div>
+                    <label for="id_date" class="block text-sm font-medium text-gray-700">Date *</label>
+                    {{ form.date }}
+                </div>
+
+                <div>
+                    <label for="id_work_done" class="block text-sm font-medium text-gray-700">Work Done *</label>
+                    {{ form.work_done }}
+                </div>
+
+                <div>
+                    <label for="id_service_provider" class="block text-sm font-medium text-gray-700">Farrier</label>
+                    {{ form.service_provider }}
+                </div>
+
+                <div>
+                    <label for="id_next_due_date" class="block text-sm font-medium text-gray-700">Next Due Date</label>
+                    {{ form.next_due_date }}
+                    <p class="mt-1 text-sm text-gray-500">Leave blank to auto-calculate (6 weeks)</p>
+                </div>
+
+                <div>
+                    <label for="id_cost" class="block text-sm font-medium text-gray-700">Cost</label>
+                    {{ form.cost }}
+                    <p class="mt-1 text-sm text-gray-500">If set, creates a billable charge</p>
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label for="id_notes" class="block text-sm font-medium text-gray-700">Notes</label>
+                    {{ form.notes }}
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-6 border-t">
+                <a href="{% url 'farrier_list' %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    {% if object %}Save Changes{% else %}Add Visit{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

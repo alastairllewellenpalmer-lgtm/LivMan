@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if object %}Edit Placement{% else %}Add Placement{% endif %} - Horse Management{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="md:flex md:items-center md:justify-between mb-6">
+        <div class="min-w-0 flex-1">
+            <h1 class="text-2xl font-bold leading-7 text-gray-900">
+                {% if object %}Edit Placement{% else %}Add Placement{% endif %}
+            </h1>
+        </div>
+    </div>
+
+    <div class="bg-white shadow rounded-lg">
+        <form method="post" class="p-6 space-y-6">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                    <label for="id_horse" class="block text-sm font-medium text-gray-700">Horse *</label>
+                    {{ form.horse }}
+                </div>
+
+                <div>
+                    <label for="id_owner" class="block text-sm font-medium text-gray-700">Owner *</label>
+                    {{ form.owner }}
+                </div>
+
+                <div>
+                    <label for="id_location" class="block text-sm font-medium text-gray-700">Location *</label>
+                    {{ form.location }}
+                </div>
+
+                <div>
+                    <label for="id_rate_type" class="block text-sm font-medium text-gray-700">Rate Type *</label>
+                    {{ form.rate_type }}
+                </div>
+
+                <div>
+                    <label for="id_start_date" class="block text-sm font-medium text-gray-700">Start Date *</label>
+                    {{ form.start_date }}
+                </div>
+
+                <div>
+                    <label for="id_end_date" class="block text-sm font-medium text-gray-700">End Date</label>
+                    {{ form.end_date }}
+                    <p class="mt-1 text-sm text-gray-500">Leave blank if current placement</p>
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label for="id_notes" class="block text-sm font-medium text-gray-700">Notes</label>
+                    {{ form.notes }}
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-6 border-t">
+                <a href="{% url 'placement_list' %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    {% if object %}Save Changes{% else %}Add Placement{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

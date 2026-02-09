@@ -1,0 +1,66 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if object %}Edit Vaccination{% else %}Add Vaccination{% endif %} - Horse Management{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="md:flex md:items-center md:justify-between mb-6">
+        <div class="min-w-0 flex-1">
+            <h1 class="text-2xl font-bold leading-7 text-gray-900">
+                {% if object %}Edit Vaccination{% else %}Add Vaccination{% endif %}
+            </h1>
+        </div>
+    </div>
+
+    <div class="bg-white shadow rounded-lg">
+        <form method="post" class="p-6 space-y-6">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                    <label for="id_horse" class="block text-sm font-medium text-gray-700">Horse *</label>
+                    {{ form.horse }}
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label for="id_vaccination_type" class="block text-sm font-medium text-gray-700">Vaccination Type *</label>
+                    {{ form.vaccination_type }}
+                </div>
+
+                <div>
+                    <label for="id_date_given" class="block text-sm font-medium text-gray-700">Date Given *</label>
+                    {{ form.date_given }}
+                </div>
+
+                <div>
+                    <label for="id_next_due_date" class="block text-sm font-medium text-gray-700">Next Due Date</label>
+                    {{ form.next_due_date }}
+                    <p class="mt-1 text-sm text-gray-500">Leave blank to auto-calculate</p>
+                </div>
+
+                <div>
+                    <label for="id_vet_name" class="block text-sm font-medium text-gray-700">Vet Name</label>
+                    {{ form.vet_name }}
+                </div>
+
+                <div>
+                    <label for="id_batch_number" class="block text-sm font-medium text-gray-700">Batch Number</label>
+                    {{ form.batch_number }}
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label for="id_notes" class="block text-sm font-medium text-gray-700">Notes</label>
+                    {{ form.notes }}
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-6 border-t">
+                <a href="{% url 'vaccination_list' %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    {% if object %}Save Changes{% else %}Add Vaccination{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

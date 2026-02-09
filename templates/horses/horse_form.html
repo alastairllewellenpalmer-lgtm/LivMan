@@ -1,0 +1,80 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if object %}Edit {{ object.name }}{% else %}Add Horse{% endif %} - Horse Management{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="md:flex md:items-center md:justify-between mb-6">
+        <div class="min-w-0 flex-1">
+            <h1 class="text-2xl font-bold leading-7 text-gray-900">
+                {% if object %}Edit {{ object.name }}{% else %}Add Horse{% endif %}
+            </h1>
+        </div>
+    </div>
+
+    <div class="bg-white shadow rounded-lg">
+        <form method="post" class="p-6 space-y-6">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                    <label for="id_name" class="block text-sm font-medium text-gray-700">Name *</label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                    {% endif %}
+                </div>
+
+                <div>
+                    <label for="id_age" class="block text-sm font-medium text-gray-700">Age (years)</label>
+                    {{ form.age }}
+                </div>
+
+                <div>
+                    <label for="id_sex" class="block text-sm font-medium text-gray-700">Sex</label>
+                    {{ form.sex }}
+                </div>
+
+                <div>
+                    <label for="id_color" class="block text-sm font-medium text-gray-700">Color</label>
+                    {{ form.color }}
+                </div>
+
+                <div>
+                    <label for="id_passport_number" class="block text-sm font-medium text-gray-700">Passport Number</label>
+                    {{ form.passport_number }}
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label for="id_breeding" class="block text-sm font-medium text-gray-700">Breeding</label>
+                    {{ form.breeding }}
+                    <p class="mt-1 text-sm text-gray-500">Sire/dam information</p>
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label for="id_notes" class="block text-sm font-medium text-gray-700">Notes</label>
+                    {{ form.notes }}
+                    <p class="mt-1 text-sm text-gray-500">Special notes (e.g., first winter, lame, needs rug)</p>
+                </div>
+
+                <div class="flex items-center">
+                    {{ form.has_passport }}
+                    <label for="id_has_passport" class="ml-2 block text-sm text-gray-700">Has passport</label>
+                </div>
+
+                <div class="flex items-center">
+                    {{ form.is_active }}
+                    <label for="id_is_active" class="ml-2 block text-sm text-gray-700">Active</label>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-6 border-t">
+                <a href="{% if object %}{% url 'horse_detail' object.pk %}{% else %}{% url 'horse_list' %}{% endif %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    {% if object %}Save Changes{% else %}Add Horse{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

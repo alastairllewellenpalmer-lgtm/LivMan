@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Invoice {{ invoice.invoice_number }}</title>
+    <style>
+        @page {
+            margin: 2cm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #333;
+        }
+        .header {
+            margin-bottom: 30px;
+        }
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4f46e5;
+            margin-bottom: 5px;
+        }
+        .company-details {
+            color: #666;
+        }
+        .invoice-title {
+            font-size: 28px;
+            font-weight: bold;
+            text-transform: uppercase;
+            margin: 30px 0 20px;
+        }
+        .invoice-details {
+            margin-bottom: 30px;
+        }
+        .invoice-details table {
+            width: 100%;
+        }
+        .invoice-details td {
+            vertical-align: top;
+            padding: 5px 0;
+        }
+        .label {
+            color: #666;
+            font-weight: bold;
+        }
+        .bill-to {
+            margin-bottom: 30px;
+        }
+        .bill-to h3 {
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+        .items-table th {
+            background-color: #4f46e5;
+            color: white;
+            padding: 10px;
+            text-align: left;
+            font-size: 11px;
+        }
+        .items-table th:last-child,
+        .items-table td:last-child {
+            text-align: right;
+        }
+        .items-table td {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .items-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .totals {
+            width: 300px;
+            margin-left: auto;
+            margin-bottom: 30px;
+        }
+        .totals table {
+            width: 100%;
+        }
+        .totals td {
+            padding: 5px 0;
+        }
+        .totals .total-row {
+            font-size: 16px;
+            font-weight: bold;
+            border-top: 2px solid #333;
+        }
+        .payment-details {
+            background-color: #f5f5f5;
+            padding: 15px;
+            margin-bottom: 30px;
+        }
+        .payment-details h3 {
+            margin: 0 0 10px;
+            font-size: 14px;
+        }
+        .notes {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            color: #999;
+            font-size: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="company-name">{{ settings.business_name }}</div>
+        <div class="company-details">
+            {% if settings.address %}{{ settings.address|linebreaksbr }}<br>{% endif %}
+            {% if settings.phone %}Tel: {{ settings.phone }}<br>{% endif %}
+            {% if settings.email %}Email: {{ settings.email }}{% endif %}
+        </div>
+    </div>
+
+    <div class="invoice-title">Invoice</div>
+
+    <div class="invoice-details">
+        <table>
+            <tr>
+                <td width="50%">
+                    <span class="label">Invoice Number:</span> {{ invoice.invoice_number }}<br>
+                    <span class="label">Date:</span> {{ invoice.created_at|date:"d/m/Y" }}<br>
+                    <span class="label">Due Date:</span> {{ invoice.due_date|date:"d/m/Y" }}
+                </td>
+                <td width="50%">
+                    <span class="label">Period:</span><br>
+                    {{ invoice.period_start|date:"d/m/Y" }} - {{ invoice.period_end|date:"d/m/Y" }}
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="bill-to">
+        <h3>BILL TO:</h3>
+        <strong>{{ invoice.owner.name }}</strong><br>
+        {% if invoice.owner.address %}{{ invoice.owner.address|linebreaksbr }}<br>{% endif %}
+        {% if invoice.owner.email %}{{ invoice.owner.email }}{% endif %}
+    </div>
+
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th>Description</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in line_items %}
+            <tr>
+                <td>{{ item.description }}</td>
+                <td>{{ item.quantity|floatformat:0 }}</td>
+                <td>{{ item.unit_price|floatformat:2 }}</td>
+                <td>{{ item.line_total|floatformat:2 }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="totals">
+        <table>
+            <tr>
+                <td>Subtotal:</td>
+                <td align="right">{{ invoice.subtotal|floatformat:2 }}</td>
+            </tr>
+            <tr class="total-row">
+                <td>Total Due:</td>
+                <td align="right">{{ invoice.total|floatformat:2 }}</td>
+            </tr>
+        </table>
+    </div>
+
+    {% if settings.bank_details %}
+    <div class="payment-details">
+        <h3>Payment Details</h3>
+        {{ settings.bank_details|linebreaksbr }}
+    </div>
+    {% endif %}
+
+    {% if invoice.notes %}
+    <div class="notes">
+        <strong>Notes:</strong><br>
+        {{ invoice.notes|linebreaksbr }}
+    </div>
+    {% endif %}
+
+    <div class="footer">
+        Thank you for your business.
+    </div>
+</body>
+</html>

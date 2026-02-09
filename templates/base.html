@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Horse Management{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <style>
+        .form-input, .form-select, .form-textarea {
+            @apply mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm;
+            padding: 0.5rem 0.75rem;
+            border: 1px solid #d1d5db;
+        }
+        .form-checkbox {
+            @apply rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-500 focus:ring-indigo-500;
+        }
+        .btn {
+            @apply inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2;
+        }
+        .btn-primary {
+            @apply text-white bg-indigo-600 hover:bg-indigo-700 focus:ring-indigo-500;
+        }
+        .btn-secondary {
+            @apply text-gray-700 bg-white border-gray-300 hover:bg-gray-50 focus:ring-indigo-500;
+        }
+        .btn-danger {
+            @apply text-white bg-red-600 hover:bg-red-700 focus:ring-red-500;
+        }
+        .btn-success {
+            @apply text-white bg-green-600 hover:bg-green-700 focus:ring-green-500;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-indigo-600 shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <a href="{% url 'dashboard' %}" class="text-white font-bold text-xl">
+                        Horse Management
+                    </a>
+                    <div class="hidden md:block ml-10">
+                        <div class="flex items-baseline space-x-4">
+                            <a href="{% url 'dashboard' %}" class="text-white hover:bg-indigo-500 px-3 py-2 rounded-md text-sm font-medium">Dashboard</a>
+                            <a href="{% url 'horse_list' %}" class="text-indigo-200 hover:bg-indigo-500 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Horses</a>
+                            <a href="{% url 'owner_list' %}" class="text-indigo-200 hover:bg-indigo-500 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Owners</a>
+                            <a href="{% url 'location_list' %}" class="text-indigo-200 hover:bg-indigo-500 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Locations</a>
+                            <a href="{% url 'invoice_list' %}" class="text-indigo-200 hover:bg-indigo-500 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Invoices</a>
+                            <a href="{% url 'vaccination_list' %}" class="text-indigo-200 hover:bg-indigo-500 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Health</a>
+                            <a href="{% url 'charge_list' %}" class="text-indigo-200 hover:bg-indigo-500 hover:text-white px-3 py-2 rounded-md text-sm font-medium">Charges</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    {% if user.is_authenticated %}
+                        <span class="text-indigo-200 mr-4">{{ user.username }}</span>
+                        <a href="{% url 'password_change' %}" class="text-indigo-200 hover:text-white text-sm mr-3">Change Password</a>
+                        <a href="{% url 'logout' %}" class="text-indigo-200 hover:text-white text-sm">Logout</a>
+                    {% else %}
+                        <a href="{% url 'login' %}" class="text-indigo-200 hover:text-white text-sm">Login</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <!-- Mobile menu -->
+        <div class="md:hidden px-2 pb-3 space-y-1">
+            <a href="{% url 'horse_list' %}" class="text-indigo-200 hover:bg-indigo-500 block px-3 py-2 rounded-md text-base font-medium">Horses</a>
+            <a href="{% url 'owner_list' %}" class="text-indigo-200 hover:bg-indigo-500 block px-3 py-2 rounded-md text-base font-medium">Owners</a>
+            <a href="{% url 'location_list' %}" class="text-indigo-200 hover:bg-indigo-500 block px-3 py-2 rounded-md text-base font-medium">Locations</a>
+        </div>
+    </nav>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
+        {% for message in messages %}
+        <div class="rounded-md p-4 mb-2 {% if message.tags == 'success' %}bg-green-50 text-green-800{% elif message.tags == 'error' %}bg-red-50 text-red-800{% else %}bg-blue-50 text-blue-800{% endif %}">
+            {{ message }}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Main content -->
+    <main class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t mt-8">
+        <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
+            <p class="text-center text-gray-500 text-sm">
+                Horse Management System
+            </p>
+        </div>
+    </footer>
+</body>
+</html>

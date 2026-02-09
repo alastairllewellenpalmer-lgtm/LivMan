@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+
+{% block title %}Move {{ horse.name }} - Horse Management{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="md:flex md:items-center md:justify-between mb-6">
+        <div class="min-w-0 flex-1">
+            <h1 class="text-2xl font-bold leading-7 text-gray-900">Move {{ horse.name }}</h1>
+            <p class="mt-1 text-sm text-gray-500">
+                {% if current_placement %}
+                Currently at {{ current_placement.location.name }} ({{ current_placement.owner.name }})
+                {% else %}
+                No current placement
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <div class="bg-white shadow rounded-lg">
+        <form method="post" class="p-6 space-y-6">
+            {% csrf_token %}
+
+            <div class="space-y-6">
+                <div>
+                    <label for="id_new_location" class="block text-sm font-medium text-gray-700">New Location *</label>
+                    {{ form.new_location }}
+                </div>
+
+                <div>
+                    <label for="id_new_owner" class="block text-sm font-medium text-gray-700">New Owner</label>
+                    {{ form.new_owner }}
+                    <p class="mt-1 text-sm text-gray-500">Leave empty to keep current owner</p>
+                </div>
+
+                <div>
+                    <label for="id_new_rate_type" class="block text-sm font-medium text-gray-700">New Rate</label>
+                    {{ form.new_rate_type }}
+                    <p class="mt-1 text-sm text-gray-500">Leave empty to keep current rate</p>
+                </div>
+
+                <div>
+                    <label for="id_move_date" class="block text-sm font-medium text-gray-700">Move Date *</label>
+                    {{ form.move_date }}
+                </div>
+
+                <div>
+                    <label for="id_notes" class="block text-sm font-medium text-gray-700">Notes</label>
+                    {{ form.notes }}
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-6 border-t">
+                <a href="{% url 'horse_detail' horse.pk %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Move Horse</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

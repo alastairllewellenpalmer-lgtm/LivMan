@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Locations - Horse Management{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="md:flex md:items-center md:justify-between">
+        <div class="min-w-0 flex-1">
+            <h1 class="text-2xl font-bold leading-7 text-gray-900">Locations</h1>
+        </div>
+        <div class="mt-4 flex md:ml-4 md:mt-0">
+            <a href="{% url 'location_create' %}" class="btn btn-primary">Add Location</a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for location in locations %}
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+            <div class="px-4 py-5 sm:p-6">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">
+                        <a href="{% url 'location_detail' location.pk %}" class="hover:text-indigo-600">
+                            {{ location.name }}
+                        </a>
+                    </h3>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                        {{ location.horse_count }} horses
+                    </span>
+                </div>
+                <p class="mt-1 text-sm text-gray-500">{{ location.site }}</p>
+                {% if location.capacity %}
+                <p class="mt-2 text-sm text-gray-500">
+                    Capacity: {{ location.horse_count }}/{{ location.capacity }}
+                    {% if location.availability <= 0 %}
+                    <span class="text-red-600">(Full)</span>
+                    {% endif %}
+                </p>
+                {% endif %}
+                {% if location.description %}
+                <p class="mt-2 text-sm text-gray-500">{{ location.description|truncatewords:20 }}</p>
+                {% endif %}
+            </div>
+            <div class="bg-gray-50 px-4 py-4 sm:px-6">
+                <div class="flex justify-between">
+                    <a href="{% url 'location_detail' location.pk %}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                        View horses
+                    </a>
+                    <a href="{% url 'location_update' location.pk %}" class="text-sm font-medium text-gray-600 hover:text-gray-500">
+                        Edit
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full text-center py-12 bg-white rounded-lg shadow">
+            <p class="text-gray-500">No locations found</p>
+            <a href="{% url 'location_create' %}" class="mt-4 btn btn-primary">Add your first location</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

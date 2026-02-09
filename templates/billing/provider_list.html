@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}Service Providers - Horse Management{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="md:flex md:items-center md:justify-between">
+        <div class="min-w-0 flex-1">
+            <h1 class="text-2xl font-bold leading-7 text-gray-900">Service Providers</h1>
+        </div>
+        <div class="mt-4 flex md:ml-4 md:mt-0">
+            <a href="{% url 'provider_create' %}" class="btn btn-primary">Add Provider</a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white shadow rounded-lg p-4">
+        <form method="get" class="flex space-x-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Type</label>
+                <select name="type" class="form-select">
+                    <option value="">All types</option>
+                    {% for value, label in provider_types %}
+                    <option value="{{ value }}" {% if request.GET.type == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex items-end space-x-2">
+                <button type="submit" class="btn btn-secondary">Filter</button>
+                <a href="{% url 'provider_list' %}" class="btn btn-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Provider List -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for provider in providers %}
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+            <div class="px-4 py-5 sm:p-6">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="text-lg font-medium text-gray-900">{{ provider.name }}</h3>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                        {% if provider.provider_type == 'vet' %}bg-red-100 text-red-800
+                        {% elif provider.provider_type == 'farrier' %}bg-yellow-100 text-yellow-800
+                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                        {{ provider.get_provider_type_display }}
+                    </span>
+                </div>
+                {% if provider.phone %}
+                <p class="text-sm text-gray-500">{{ provider.phone }}</p>
+                {% endif %}
+                {% if provider.email %}
+                <p class="text-sm text-gray-500">{{ provider.email }}</p>
+                {% endif %}
+                {% if not provider.is_active %}
+                <p class="mt-2 text-sm text-red-600">Inactive</p>
+                {% endif %}
+            </div>
+            <div class="bg-gray-50 px-4 py-4 sm:px-6">
+                <a href="{% url 'provider_update' provider.pk %}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                    Edit
+                </a>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full text-center py-12 bg-white rounded-lg shadow">
+            <p class="text-gray-500">No service providers found</p>
+            <a href="{% url 'provider_create' %}" class="mt-4 btn btn-primary">Add your first provider</a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

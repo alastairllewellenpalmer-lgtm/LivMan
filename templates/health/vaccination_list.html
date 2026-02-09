@@ -1,0 +1,97 @@
+{% extends 'base.html' %}
+
+{% block title %}Vaccinations - Horse Management{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="md:flex md:items-center md:justify-between">
+        <div class="min-w-0 flex-1">
+            <h1 class="text-2xl font-bold leading-7 text-gray-900">Vaccinations</h1>
+        </div>
+        <div class="mt-4 flex space-x-3 md:ml-4 md:mt-0">
+            <a href="{% url 'farrier_list' %}" class="btn btn-secondary">Farrier Visits</a>
+            <a href="{% url 'vaccination_create' %}" class="btn btn-primary">Add Vaccination</a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white shadow rounded-lg p-4">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All</option>
+                    <option value="due" {% if request.GET.status == 'due' %}selected{% endif %}>Due Soon (30 days)</option>
+                    <option value="overdue" {% if request.GET.status == 'overdue' %}selected{% endif %}>Overdue</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Horse</label>
+                <select name="horse" class="form-select">
+                    <option value="">All horses</option>
+                    {% for h in horses %}
+                    <option value="{{ h.pk }}" {% if request.GET.horse == h.pk|stringformat:"s" %}selected{% endif %}>{{ h.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex items-end space-x-2">
+                <button type="submit" class="btn btn-secondary">Filter</button>
+                <a href="{% url 'vaccination_list' %}" class="btn btn-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Vaccination List -->
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Horse</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date Given</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Next Due</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for vax in vaccinations %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <a href="{% url 'horse_detail' vax.horse.pk %}" class="text-indigo-600 hover:text-indigo-900 font-medium">
+                            {{ vax.horse.name }}
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {{ vax.vaccination_type.name }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {{ vax.date_given }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm {% if vax.next_due_date < today %}text-red-600 font-medium{% elif vax.is_due_soon %}text-orange-600{% else %}text-gray-500{% endif %}">
+                        {{ vax.next_due_date }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if vax.next_due_date < today %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Overdue</span>
+                        {% elif vax.is_due_soon %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">Due Soon</span>
+                        {% else %}
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">OK</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <a href="{% url 'vaccination_update' vax.pk %}" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
+                        <a href="{% url 'vaccination_create' %}?horse={{ vax.horse.pk }}" class="text-green-600 hover:text-green-900">Re-vaccinate</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">No vaccination records found</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
