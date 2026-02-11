@@ -72,20 +72,22 @@
                         {{ horse.get_color_display }}
                         {{ horse.get_sex_display }}
                     </td>
+                    {% with placement=horse.active_placements.0 %}
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {% if horse.current_owner %}
-                        <a href="{% url 'owner_detail' horse.current_owner.pk %}" class="text-indigo-600 hover:text-indigo-500">
-                            {{ horse.current_owner.name }}
+                        {% if placement.owner %}
+                        <a href="{% url 'owner_detail' placement.owner.pk %}" class="text-indigo-600 hover:text-indigo-500">
+                            {{ placement.owner.name }}
                         </a>
                         {% else %}-{% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {% if horse.current_location %}
-                        <a href="{% url 'location_detail' horse.current_location.pk %}" class="text-indigo-600 hover:text-indigo-500">
-                            {{ horse.current_location.name }}
+                        {% if placement.location %}
+                        <a href="{% url 'location_detail' placement.location.pk %}" class="text-indigo-600 hover:text-indigo-500">
+                            {{ placement.location.name }}
                         </a>
                         {% else %}-{% endif %}
                     </td>
+                    {% endwith %}
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                         <a href="{% url 'horse_update' horse.pk %}" class="text-indigo-600 hover:text-indigo-900 mr-3">Edit</a>
                         <a href="{% url 'horse_move' horse.pk %}" class="text-green-600 hover:text-green-900">Move</a>

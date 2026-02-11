@@ -8,7 +8,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.exceptions import ValidationError
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, Prefetch, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -21,7 +21,15 @@ from django.views.generic import (
 )
 
 from billing.models import ExtraCharge
-from health.models import FarrierVisit, Vaccination
+from health.models import (
+    BreedingRecord,
+    FarrierVisit,
+    MedicalCondition,
+    Vaccination,
+    VetVisit,
+    WormEggCount,
+    WormingTreatment,
+)
 
 from .forms import HorseForm, LocationForm, MoveHorseForm, OwnerForm, PlacementForm
 from .models import Horse, Invoice, Location, Owner, Placement, RateType
@@ -79,6 +87,25 @@ def dashboard(request):
         total=Sum('amount')
     )['total'] or 0
 
+    # Mares with EHV vaccinations due soon
+    ehv_due = BreedingRecord.objects.filter(
+        status='confirmed',
+        mare__is_active=True,
+    ).select_related('mare')[:10]
+
+    # Recent high worm egg counts (>200 EPG)
+    high_egg_counts = WormEggCount.objects.filter(
+        count__gt=200,
+        horse__is_active=True,
+    ).select_related('horse').order_by('-date')[:10]
+
+    # Upcoming vet follow-ups
+    vet_follow_ups = VetVisit.objects.filter(
+        follow_up_date__gte=today,
+        follow_up_date__lte=thirty_days,
+        horse__is_active=True,
+    ).select_related('horse', 'vet').order_by('follow_up_date')[:10]
+
     context = {
         'total_horses': total_horses,
         'horses_by_location': horses_by_location,
@@ -88,6 +115,9 @@ def dashboard(request):
         'outstanding_invoices': outstanding_invoices,
         'unbilled_charges': unbilled_charges,
         'unbilled_total': unbilled_total,
+        'ehv_due': ehv_due,
+        'high_egg_counts': high_egg_counts,
+        'vet_follow_ups': vet_follow_ups,
     }
 
     return render(request, 'dashboard.html', context)
@@ -101,7 +131,16 @@ class HorseListView(LoginRequiredMixin, ListView):
     paginate_by = 50
 
     def get_queryset(self):
-        queryset = Horse.objects.filter(is_active=True)
+        active_placements = Prefetch(
+            'placements',
+            queryset=Placement.objects.filter(
+                end_date__isnull=True
+            ).select_related('owner', 'location'),
+            to_attr='active_placements',
+        )
+        queryset = Horse.objects.filter(is_active=True).prefetch_related(
+            active_placements
+        )
 
         # Search filter
         search = self.request.GET.get('search')
@@ -143,10 +182,24 @@ class HorseDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['placements'] = self.object.placements.all()[:10]
-        context['vaccinations'] = self.object.vaccinations.all()[:5]
-        context['farrier_visits'] = self.object.farrier_visits.all()[:5]
-        context['extra_charges'] = self.object.extra_charges.all()[:10]
+        horse = self.object
+        context['placements'] = horse.placements.all()[:10]
+        context['vaccinations'] = horse.vaccinations.all()[:5]
+        context['farrier_visits'] = horse.farrier_visits.all()[:5]
+        context['extra_charges'] = horse.extra_charges.all()[:10]
+        # New sections
+        context['worming_treatments'] = horse.worming_treatments.all()[:10]
+        context['egg_counts'] = horse.worm_egg_counts.all()[:10]
+        context['medical_conditions'] = horse.medical_conditions.all()
+        context['vet_visits'] = horse.vet_visits.select_related('vet').all()[:10]
+        # Breeding (mare only)
+        if horse.is_mare:
+            context['breeding_records'] = horse.breeding_records.select_related('foal').all()
+            context['active_pregnancy'] = horse.breeding_records.filter(
+                status__in=['covered', 'confirmed']
+            ).first()
+        # Foals via dam FK
+        context['foals'] = horse.foals.all() if horse.is_mare else []
         return context
 
 

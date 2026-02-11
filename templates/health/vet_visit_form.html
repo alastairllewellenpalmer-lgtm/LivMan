@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if object %}Edit Vet Visit{% else %}Add Vet Visit{% endif %} - Horse Management{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="md:flex md:items-center md:justify-between mb-6">
+        <div class="min-w-0 flex-1">
+            <h1 class="text-2xl font-bold leading-7 text-gray-900">
+                {% if object %}Edit Vet Visit{% else %}Add Vet Visit{% endif %}
+            </h1>
+        </div>
+    </div>
+
+    <div class="bg-white shadow rounded-lg">
+        <form method="post" class="p-6 space-y-6">
+            {% csrf_token %}
+
+            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div class="sm:col-span-2">
+                    <label for="id_horse" class="block text-sm font-medium text-gray-700">Horse *</label>
+                    {{ form.horse }}
+                </div>
+
+                <div>
+                    <label for="id_date" class="block text-sm font-medium text-gray-700">Date *</label>
+                    {{ form.date }}
+                </div>
+
+                <div>
+                    <label for="id_vet" class="block text-sm font-medium text-gray-700">Vet</label>
+                    {{ form.vet }}
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label for="id_reason" class="block text-sm font-medium text-gray-700">Reason *</label>
+                    {{ form.reason }}
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label for="id_diagnosis" class="block text-sm font-medium text-gray-700">Diagnosis</label>
+                    {{ form.diagnosis }}
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label for="id_treatment" class="block text-sm font-medium text-gray-700">Treatment</label>
+                    {{ form.treatment }}
+                </div>
+
+                <div>
+                    <label for="id_follow_up_date" class="block text-sm font-medium text-gray-700">Follow-up Date</label>
+                    {{ form.follow_up_date }}
+                </div>
+
+                <div>
+                    <label for="id_cost" class="block text-sm font-medium text-gray-700">Cost (&pound;)</label>
+                    {{ form.cost }}
+                    <p class="mt-1 text-sm text-gray-500">If &gt; &pound;0, a billable charge will be created</p>
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label for="id_notes" class="block text-sm font-medium text-gray-700">Notes</label>
+                    {{ form.notes }}
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3 pt-6 border-t">
+                <a href="{% url 'vet_visit_list' %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    {% if object %}Save Changes{% else %}Add Vet Visit{% endif %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

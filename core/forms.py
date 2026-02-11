@@ -36,15 +36,20 @@ class HorseForm(forms.ModelForm):
     class Meta:
         model = Horse
         fields = [
-            'name', 'age', 'sex', 'color', 'breeding',
+            'name', 'date_of_birth', 'age', 'sex', 'color',
+            'dam', 'sire_name', 'breeding', 'photo',
             'notes', 'passport_number', 'has_passport', 'is_active'
         ]
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-input'}),
+            'date_of_birth': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
             'age': forms.NumberInput(attrs={'class': 'form-input'}),
             'sex': forms.Select(attrs={'class': 'form-select'}),
             'color': forms.Select(attrs={'class': 'form-select'}),
+            'dam': forms.Select(attrs={'class': 'form-select'}),
+            'sire_name': forms.TextInput(attrs={'class': 'form-input'}),
             'breeding': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 2}),
+            'photo': forms.ClearableFileInput(attrs={'class': 'form-input'}),
             'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3}),
             'passport_number': forms.TextInput(attrs={'class': 'form-input'}),
             'has_passport': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),

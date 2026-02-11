@@ -201,6 +201,87 @@
         </div>
     </div>
 
+    <!-- Health Alerts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- EHV Due -->
+        {% if ehv_due %}
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 border-b border-gray-200 sm:px-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">EHV Vaccinations Due</h3>
+            </div>
+            <ul class="divide-y divide-gray-200">
+                {% for br in ehv_due %}
+                <li class="px-4 py-4 sm:px-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <a href="{% url 'horse_detail' br.mare.pk %}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                                {{ br.mare.name }}
+                            </a>
+                            <p class="text-sm text-gray-500">x {{ br.stallion_name }}</p>
+                        </div>
+                        <span class="text-sm text-blue-600">
+                            Due: {{ br.date_foal_due|default:"TBC" }}
+                        </span>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- High Egg Counts -->
+        {% if high_egg_counts %}
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 border-b border-gray-200 sm:px-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">High Egg Counts (&gt;200 EPG)</h3>
+            </div>
+            <ul class="divide-y divide-gray-200">
+                {% for ec in high_egg_counts %}
+                <li class="px-4 py-4 sm:px-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <a href="{% url 'horse_detail' ec.horse.pk %}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                                {{ ec.horse.name }}
+                            </a>
+                            <p class="text-sm text-gray-500">{{ ec.date }}</p>
+                        </div>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            {{ ec.count }} EPG
+                        </span>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Vet Follow-ups -->
+        {% if vet_follow_ups %}
+        <div class="bg-white shadow rounded-lg">
+            <div class="px-4 py-5 border-b border-gray-200 sm:px-6">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">Vet Follow-ups (Next 30 Days)</h3>
+            </div>
+            <ul class="divide-y divide-gray-200">
+                {% for v in vet_follow_ups %}
+                <li class="px-4 py-4 sm:px-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <a href="{% url 'horse_detail' v.horse.pk %}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                                {{ v.horse.name }}
+                            </a>
+                            <p class="text-sm text-gray-500">{{ v.reason|truncatewords:6 }}</p>
+                        </div>
+                        <span class="text-sm text-orange-600">
+                            {{ v.follow_up_date }}
+                        </span>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
     <!-- Outstanding Invoices -->
     {% if outstanding_invoices %}
     <div class="bg-white shadow rounded-lg">

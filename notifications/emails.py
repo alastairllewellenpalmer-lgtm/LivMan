@@ -129,6 +129,48 @@ def send_farrier_reminder(farrier_visit):
         return False
 
 
+def send_ehv_reminder(breeding_record, month_number):
+    """Send EHV vaccination reminder for a pregnant mare."""
+    mare = breeding_record.mare
+    owner = mare.current_owner
+
+    if not owner or not owner.email:
+        return False
+
+    business = BusinessSettings.get_settings()
+
+    ehv_dates = breeding_record.ehv_vaccination_dates
+    due_date = ehv_dates.get(month_number)
+
+    subject = f"EHV Vaccination Due: {mare.name} - Month {month_number}"
+
+    context = {
+        'breeding_record': breeding_record,
+        'mare': mare,
+        'owner': owner,
+        'business': business,
+        'month_number': month_number,
+        'due_date': due_date,
+    }
+
+    html_content = render_to_string('notifications/email/ehv_reminder.html', context)
+
+    email = EmailMessage(
+        subject=subject,
+        body=html_content,
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to=[owner.email],
+    )
+    email.content_subtype = 'html'
+
+    try:
+        email.send()
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send EHV reminder email: {e}")
+        return False
+
+
 def send_invoice_overdue_reminder(invoice):
     """Send overdue invoice reminder email."""
     if not invoice.owner.email:

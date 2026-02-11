@@ -2,12 +2,11 @@
 Core models for horse management system.
 """
 
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.core.validators import MinValueValidator
 from django.db import models
-from datetime import timedelta
-
 from django.utils import timezone
 
 
@@ -110,10 +109,17 @@ class Horse(models.Model):
         OTHER = 'other', 'Other'
 
     name = models.CharField(max_length=200)
-    age = models.PositiveIntegerField(null=True, blank=True, help_text="Age in years")
+    date_of_birth = models.DateField(null=True, blank=True, help_text="Date of birth")
+    age = models.PositiveIntegerField(null=True, blank=True, help_text="Age in years (used if DOB unknown)")
     color = models.CharField(max_length=20, choices=Color.choices, blank=True)
     sex = models.CharField(max_length=20, choices=Sex.choices, blank=True)
-    breeding = models.TextField(blank=True, help_text="Sire/dam information")
+    breeding = models.TextField(blank=True, help_text="Sire/dam information (free text)")
+    dam = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='offspring_as_dam', help_text="Dam (mother) if she is in the system"
+    )
+    sire_name = models.CharField(max_length=200, blank=True, help_text="Stallion name")
+    photo = models.ImageField(upload_to='horses/', blank=True, null=True)
     notes = models.TextField(blank=True, help_text="Special notes (e.g., first winter, lame, needs rug)")
     passport_number = models.CharField(max_length=100, blank=True)
     has_passport = models.BooleanField(default=True)
@@ -126,6 +132,25 @@ class Horse(models.Model):
 
     def __str__(self):
         return self.name
+
+    @property
+    def calculated_age(self):
+        """Return age from DOB if set, else fall back to age field."""
+        if self.date_of_birth:
+            today = date.today()
+            return today.year - self.date_of_birth.year - (
+                (today.month, today.day) < (self.date_of_birth.month, self.date_of_birth.day)
+            )
+        return self.age
+
+    @property
+    def is_mare(self):
+        return self.sex == self.Sex.MARE
+
+    @property
+    def foals(self):
+        """Return offspring where this horse is the dam."""
+        return Horse.objects.filter(dam=self)
 
     @property
     def current_placement(self):

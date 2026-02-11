@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Worming Treatments - Horse Management{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="md:flex md:items-center md:justify-between">
+        <div class="min-w-0 flex-1">
+            <h1 class="text-2xl font-bold leading-7 text-gray-900">Worming Treatments</h1>
+        </div>
+        <div class="mt-4 flex space-x-3 md:ml-4 md:mt-0">
+            <a href="{% url 'egg_count_list' %}" class="btn btn-secondary">Egg Counts</a>
+            <a href="{% url 'worming_create' %}" class="btn btn-primary">Add Treatment</a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white shadow rounded-lg p-4">
+        <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Horse</label>
+                <select name="horse" class="form-select">
+                    <option value="">All horses</option>
+                    {% for h in horses %}
+                    <option value="{{ h.pk }}" {% if request.GET.horse == h.pk|stringformat:"s" %}selected{% endif %}>{{ h.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="flex items-end space-x-2">
+                <button type="submit" class="btn btn-secondary">Filter</button>
+                <a href="{% url 'worming_list' %}" class="btn btn-secondary">Clear</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Treatment List -->
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Horse</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Product</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Active Ingredient</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Administered By</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for t in treatments %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <a href="{% url 'horse_detail' t.horse.pk %}" class="text-indigo-600 hover:text-indigo-900 font-medium">
+                            {{ t.horse.name }}
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ t.date }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ t.product_name }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ t.active_ingredient|default:"-" }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ t.administered_by|default:"-" }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <a href="{% url 'worming_update' t.pk %}" class="text-indigo-600 hover:text-indigo-900">Edit</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6" class="px-6 py-4 text-center text-gray-500">No worming treatments recorded</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

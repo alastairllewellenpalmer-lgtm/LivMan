@@ -2,7 +2,7 @@
 Health and care tracking models.
 """
 
-from datetime import timedelta
+from datetime import date, timedelta
 from decimal import Decimal
 
 from django.db import models
@@ -152,3 +152,200 @@ class FarrierVisit(models.Model):
         if not self.next_due_date:
             return False
         return timezone.now().date() > self.next_due_date
+
+
+class WormingTreatment(models.Model):
+    """Worming treatment record for a horse."""
+
+    horse = models.ForeignKey(
+        'core.Horse', on_delete=models.CASCADE, related_name='worming_treatments'
+    )
+    date = models.DateField()
+    product_name = models.CharField(max_length=200, help_text="Brand name of wormer")
+    active_ingredient = models.CharField(max_length=200, blank=True)
+    dose = models.CharField(max_length=100, blank=True)
+    administered_by = models.CharField(max_length=200, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"{self.horse.name} - {self.product_name} ({self.date})"
+
+
+class WormEggCount(models.Model):
+    """Worm egg count (faecal/saliva test) result."""
+
+    class SampleType(models.TextChoices):
+        FEC = 'fec', 'Faecal Egg Count (FEC)'
+        SALIVA = 'saliva', 'Saliva Test'
+        OTHER = 'other', 'Other'
+
+    horse = models.ForeignKey(
+        'core.Horse', on_delete=models.CASCADE, related_name='worm_egg_counts'
+    )
+    date = models.DateField()
+    count = models.PositiveIntegerField(help_text="Eggs per gram (EPG)")
+    lab_name = models.CharField(max_length=200, blank=True)
+    sample_type = models.CharField(
+        max_length=20, choices=SampleType.choices, default=SampleType.FEC
+    )
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"{self.horse.name} - {self.count} EPG ({self.date})"
+
+    @property
+    def is_high(self):
+        return self.count > 200
+
+
+class MedicalCondition(models.Model):
+    """Ongoing medical condition for a horse."""
+
+    class Status(models.TextChoices):
+        ACTIVE = 'active', 'Active'
+        RESOLVED = 'resolved', 'Resolved'
+        MONITORING = 'monitoring', 'Monitoring'
+
+    horse = models.ForeignKey(
+        'core.Horse', on_delete=models.CASCADE, related_name='medical_conditions'
+    )
+    name = models.CharField(max_length=200, help_text="e.g. Laminitis, Sweet Itch")
+    diagnosed_date = models.DateField(null=True, blank=True)
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.ACTIVE
+    )
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.horse.name} - {self.name} ({self.get_status_display()})"
+
+
+class VetVisit(models.Model):
+    """Vet visit record for a horse."""
+
+    horse = models.ForeignKey(
+        'core.Horse', on_delete=models.CASCADE, related_name='vet_visits'
+    )
+    date = models.DateField()
+    vet = models.ForeignKey(
+        'billing.ServiceProvider', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='vet_visits'
+    )
+    reason = models.CharField(max_length=500)
+    diagnosis = models.TextField(blank=True)
+    treatment = models.TextField(blank=True)
+    follow_up_date = models.DateField(null=True, blank=True)
+    cost = models.DecimalField(max_digits=8, decimal_places=2, default=Decimal('0.00'))
+    extra_charge = models.OneToOneField(
+        'billing.ExtraCharge', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='vet_visit'
+    )
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date']
+
+    def __str__(self):
+        return f"{self.horse.name} - {self.reason} ({self.date})"
+
+
+class BreedingRecord(models.Model):
+    """Breeding and foaling record for a mare."""
+
+    class Status(models.TextChoices):
+        COVERED = 'covered', 'Covered'
+        CONFIRMED = 'confirmed', 'Confirmed In-Foal'
+        BORN = 'born', 'Born'
+        LOST = 'lost', 'Lost'
+        BARREN = 'barren', 'Barren'
+
+    class FoalSex(models.TextChoices):
+        COLT = 'colt', 'Colt'
+        FILLY = 'filly', 'Filly'
+
+    class FoalColour(models.TextChoices):
+        BAY = 'bay', 'Bay'
+        CHESTNUT = 'chestnut', 'Chestnut'
+        GREY = 'grey', 'Grey'
+        BLACK = 'black', 'Black'
+        BROWN = 'brown', 'Brown'
+        PALOMINO = 'palomino', 'Palomino'
+        SKEWBALD = 'skewbald', 'Skewbald'
+        PIEBALD = 'piebald', 'Piebald'
+        ROAN = 'roan', 'Roan'
+        DUN = 'dun', 'Dun'
+        CREAM = 'cream', 'Cream'
+        OTHER = 'other', 'Other'
+
+    mare = models.ForeignKey(
+        'core.Horse', on_delete=models.CASCADE, related_name='breeding_records',
+        limit_choices_to={'sex': 'mare'}
+    )
+    stallion_name = models.CharField(max_length=200)
+    date_covered = models.DateField()
+    date_scanned_14_days = models.DateField(null=True, blank=True, help_text="In-foal scan")
+    date_scanned_heartbeat = models.DateField(null=True, blank=True)
+    date_foal_due = models.DateField(null=True, blank=True)
+    foal = models.ForeignKey(
+        'core.Horse', on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='birth_record'
+    )
+    foal_dob = models.DateField(null=True, blank=True)
+    foal_sex = models.CharField(max_length=20, choices=FoalSex.choices, blank=True)
+    foal_colour = models.CharField(max_length=20, choices=FoalColour.choices, blank=True)
+    foal_microchip = models.CharField(max_length=100, blank=True)
+    foaling_notes = models.TextField(blank=True)
+    status = models.CharField(
+        max_length=20, choices=Status.choices, default=Status.COVERED
+    )
+    ehv_reminders_sent = models.CharField(
+        max_length=20, blank=True,
+        help_text="Comma-separated list of EHV reminder months already sent (e.g. 5,7)"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-date_covered']
+
+    def __str__(self):
+        return f"{self.mare.name} x {self.stallion_name} ({self.date_covered})"
+
+    def save(self, *args, **kwargs):
+        if not self.date_foal_due and self.date_covered:
+            self.date_foal_due = self.date_covered + timedelta(days=340)
+        super().save(*args, **kwargs)
+
+    @property
+    def ehv_vaccination_dates(self):
+        """Calculate EHV 1,4 vaccination dates at months 5, 7, 9 from covering."""
+        if not self.date_covered:
+            return {}
+        return {
+            5: self.date_covered + timedelta(days=5 * 30),
+            7: self.date_covered + timedelta(days=7 * 30),
+            9: self.date_covered + timedelta(days=9 * 30),
+        }
+
+    @property
+    def sent_ehv_months(self):
+        if not self.ehv_reminders_sent:
+            return set()
+        return {int(m) for m in self.ehv_reminders_sent.split(',') if m.strip()}

@@ -13,7 +13,7 @@
     </div>
 
     <div class="bg-white shadow rounded-lg">
-        <form method="post" class="p-6 space-y-6">
+        <form method="post" enctype="multipart/form-data" class="p-6 space-y-6">
             {% csrf_token %}
 
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -26,8 +26,15 @@
                 </div>
 
                 <div>
+                    <label for="id_date_of_birth" class="block text-sm font-medium text-gray-700">Date of Birth</label>
+                    {{ form.date_of_birth }}
+                    <p class="mt-1 text-sm text-gray-500">Age will be calculated automatically from DOB</p>
+                </div>
+
+                <div>
                     <label for="id_age" class="block text-sm font-medium text-gray-700">Age (years)</label>
                     {{ form.age }}
+                    <p class="mt-1 text-sm text-gray-500">Only used if DOB is not set</p>
                 </div>
 
                 <div>
@@ -36,8 +43,19 @@
                 </div>
 
                 <div>
-                    <label for="id_color" class="block text-sm font-medium text-gray-700">Color</label>
+                    <label for="id_color" class="block text-sm font-medium text-gray-700">Colour</label>
                     {{ form.color }}
+                </div>
+
+                <div>
+                    <label for="id_dam" class="block text-sm font-medium text-gray-700">Dam (Mother)</label>
+                    {{ form.dam }}
+                    <p class="mt-1 text-sm text-gray-500">Select if the dam is in the system</p>
+                </div>
+
+                <div>
+                    <label for="id_sire_name" class="block text-sm font-medium text-gray-700">Sire Name</label>
+                    {{ form.sire_name }}
                 </div>
 
                 <div>
@@ -45,10 +63,15 @@
                     {{ form.passport_number }}
                 </div>
 
+                <div>
+                    <label for="id_photo" class="block text-sm font-medium text-gray-700">Photo</label>
+                    {{ form.photo }}
+                </div>
+
                 <div class="sm:col-span-2">
                     <label for="id_breeding" class="block text-sm font-medium text-gray-700">Breeding</label>
                     {{ form.breeding }}
-                    <p class="mt-1 text-sm text-gray-500">Sire/dam information</p>
+                    <p class="mt-1 text-sm text-gray-500">Free text sire/dam information</p>
                 </div>
 
                 <div class="sm:col-span-2">

@@ -8,9 +8,10 @@ from celery import shared_task
 from django.utils import timezone
 
 from core.models import Invoice
-from health.models import FarrierVisit, Vaccination
+from health.models import BreedingRecord, FarrierVisit, Vaccination
 
 from .emails import (
+    send_ehv_reminder,
     send_farrier_reminder,
     send_invoice_overdue_reminder,
     send_vaccination_reminder,
@@ -108,6 +109,47 @@ def send_overdue_invoice_reminders():
             reminders_sent += 1
 
     return f"Sent {reminders_sent} overdue invoice reminders"
+
+
+@shared_task
+def send_ehv_reminders():
+    """
+    Send EHV vaccination reminders for pregnant mares.
+    Checks months 5, 7, 9 from covering date.
+    Sends reminder 14 days before each due date.
+    Run daily via Celery Beat.
+    """
+    today = timezone.now().date()
+    reminders_sent = 0
+
+    # Get active breeding records that are confirmed in-foal
+    active_records = BreedingRecord.objects.filter(
+        status='confirmed',
+        mare__is_active=True,
+    ).select_related('mare')
+
+    for record in active_records:
+        ehv_dates = record.ehv_vaccination_dates
+        sent_months = record.sent_ehv_months
+
+        for month, due_date in ehv_dates.items():
+            if month in sent_months:
+                continue
+
+            # Send reminder 14 days before due date
+            reminder_date = due_date - timedelta(days=14)
+            if today >= reminder_date and today <= due_date + timedelta(days=7):
+                success = send_ehv_reminder(record, month)
+                if success:
+                    # Mark this month as sent
+                    if record.ehv_reminders_sent:
+                        record.ehv_reminders_sent += f',{month}'
+                    else:
+                        record.ehv_reminders_sent = str(month)
+                    record.save(update_fields=['ehv_reminders_sent'])
+                    reminders_sent += 1
+
+    return f"Sent {reminders_sent} EHV reminders"
 
 
 @shared_task

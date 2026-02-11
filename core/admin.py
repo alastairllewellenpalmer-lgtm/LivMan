@@ -36,12 +36,13 @@ class LocationAdmin(admin.ModelAdmin):
 @admin.register(Horse)
 class HorseAdmin(admin.ModelAdmin):
     list_display = [
-        'name', 'age', 'sex', 'color', 'current_owner_display',
+        'name', 'date_of_birth', 'age', 'sex', 'color', 'current_owner_display',
         'current_location_display', 'is_active'
     ]
     list_filter = ['sex', 'color', 'is_active', 'has_passport']
-    search_fields = ['name', 'passport_number', 'notes']
+    search_fields = ['name', 'passport_number', 'notes', 'sire_name']
     readonly_fields = ['created_at', 'updated_at']
+    raw_id_fields = ['dam']
 
     def current_owner_display(self, obj):
         owner = obj.current_owner
