@@ -12,7 +12,8 @@ class ExtraChargeForm(forms.ModelForm):
         model = ExtraCharge
         fields = [
             'horse', 'owner', 'service_provider', 'charge_type',
-            'date', 'description', 'amount', 'receipt_image', 'notes'
+            'date', 'description', 'amount', 'receipt_image', 'notes',
+            'split_by_ownership'
         ]
         widgets = {
             'horse': forms.Select(attrs={'class': 'form-select'}),
@@ -24,6 +25,7 @@ class ExtraChargeForm(forms.ModelForm):
             'amount': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01'}),
             'receipt_image': forms.FileInput(attrs={'class': 'form-input'}),
             'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 2}),
+            'split_by_ownership': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
         }
 
 

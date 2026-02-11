@@ -1,0 +1,134 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if object %}Edit{% else %}Add{% endif %} Ownership - Horse Management{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="space-y-6">
+        <div>
+            <h1 class="text-2xl font-bold leading-7 text-gray-900">
+                {% if object %}Edit{% else %}Add{% endif %} Ownership
+            </h1>
+            {% if horse %}
+            <p class="mt-1 text-sm text-gray-500">
+                {% if object %}Editing ownership record for{% else %}Adding new owner for{% endif %} <strong>{{ horse.name }}</strong>
+            </p>
+            {% endif %}
+        </div>
+
+        {% if current_ownerships %}
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h3 class="text-sm font-medium text-blue-800 mb-2">Current Ownership</h3>
+            <div class="space-y-2">
+                {% for o in current_ownerships %}
+                <div class="flex items-center justify-between text-sm">
+                    <span class="text-blue-700">{{ o.owner.name }}</span>
+                    <span class="font-medium text-blue-900">{{ o.percentage }}%</span>
+                </div>
+                {% endfor %}
+                {% with total=current_ownerships|length %}
+                <div class="pt-2 border-t border-blue-200 flex items-center justify-between text-sm font-medium">
+                    <span class="text-blue-700">Available</span>
+                    <span class="text-blue-900">
+                        {% widthratio 100 1 1 as max_pct %}
+                        {{ max_pct|add:"-"|add:current_ownerships.0.percentage }}%
+                    </span>
+                </div>
+                {% endwith %}
+            </div>
+        </div>
+        {% endif %}
+
+        <form method="post" class="bg-white shadow rounded-lg">
+            {% csrf_token %}
+            <div class="p-6 space-y-6">
+                {% if form.non_field_errors %}
+                <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <div class="text-sm text-red-700">
+                        {% for error in form.non_field_errors %}
+                        <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                    <div>
+                        <label for="{{ form.horse.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Horse
+                        </label>
+                        {{ form.horse }}
+                        {% if form.horse.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.horse.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.owner.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Owner
+                        </label>
+                        {{ form.owner }}
+                        {% if form.owner.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.owner.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.percentage.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Ownership Percentage
+                        </label>
+                        <div class="mt-1 relative rounded-md shadow-sm">
+                            {{ form.percentage }}
+                            <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500 sm:text-sm">%</span>
+                            </div>
+                        </div>
+                        {% if form.percentage.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.percentage.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Enter a value between 0.01 and 100.00</p>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.start_date.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Start Date
+                        </label>
+                        {{ form.start_date }}
+                        {% if form.start_date.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.start_date.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.end_date.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            End Date <span class="text-gray-400">(optional)</span>
+                        </label>
+                        {{ form.end_date }}
+                        {% if form.end_date.errors %}
+                        <p class="mt-1 text-sm text-red-600">{{ form.end_date.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-gray-500">Leave blank if ownership is ongoing</p>
+                    </div>
+                </div>
+
+                <div>
+                    <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        Notes <span class="text-gray-400">(optional)</span>
+                    </label>
+                    {{ form.notes }}
+                    {% if form.notes.errors %}
+                    <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end space-x-3">
+                <a href="{% if horse %}{% url 'horse_detail' horse.pk %}{% else %}{% url 'ownership_list' %}{% endif %}" class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">
+                    {% if object %}Update{% else %}Add{% endif %} Ownership
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

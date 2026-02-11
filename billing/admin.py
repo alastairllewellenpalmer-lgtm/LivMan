@@ -20,9 +20,9 @@ class ServiceProviderAdmin(admin.ModelAdmin):
 class ExtraChargeAdmin(admin.ModelAdmin):
     list_display = [
         'horse', 'owner', 'charge_type', 'date',
-        'description', 'amount', 'invoiced_display'
+        'description', 'amount', 'split_by_ownership', 'invoiced_display'
     ]
-    list_filter = ['charge_type', 'invoiced', 'date']
+    list_filter = ['charge_type', 'invoiced', 'split_by_ownership', 'date']
     search_fields = ['horse__name', 'owner__name', 'description']
     date_hierarchy = 'date'
     raw_id_fields = ['horse', 'owner', 'invoice']

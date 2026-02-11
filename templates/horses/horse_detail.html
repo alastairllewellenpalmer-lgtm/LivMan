@@ -81,6 +81,60 @@
                 </div>
             </div>
 
+            <!-- Ownership -->
+            <div class="bg-white shadow rounded-lg">
+                <div class="px-4 py-5 border-b border-gray-200 sm:px-6 flex items-center justify-between">
+                    <h3 class="text-lg leading-6 font-medium text-gray-900">Ownership</h3>
+                    <a href="{% url 'ownership_create' %}?horse={{ horse.pk }}" class="text-sm text-indigo-600 hover:text-indigo-500">+ Add Owner</a>
+                </div>
+                <div class="px-4 py-5 sm:p-6">
+                    {% if current_ownerships %}
+                    <div class="space-y-3">
+                        {% for ownership in current_ownerships %}
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div>
+                                <a href="{% url 'owner_detail' ownership.owner.pk %}" class="text-sm font-medium text-indigo-600 hover:text-indigo-500">
+                                    {{ ownership.owner.name }}
+                                </a>
+                                <p class="text-xs text-gray-500">Since {{ ownership.start_date }}</p>
+                            </div>
+                            <div class="flex items-center space-x-4">
+                                <span class="text-lg font-bold text-gray-900">{{ ownership.percentage }}%</span>
+                                <a href="{% url 'ownership_update' ownership.pk %}" class="text-sm text-gray-500 hover:text-gray-700">Edit</a>
+                                <a href="{% url 'ownership_end' ownership.pk %}" class="text-sm text-orange-500 hover:text-orange-700">End</a>
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        <!-- Ownership visualization bar -->
+                        <div class="mt-4">
+                            <div class="h-4 flex rounded-full overflow-hidden bg-gray-200">
+                                {% for ownership in current_ownerships %}
+                                <div class="h-full"
+                                     style="width: {{ ownership.percentage }}%; background-color: hsl({{ forloop.counter0|add:forloop.counter0|add:forloop.counter0 }}0, 70%, 50%);"
+                                     title="{{ ownership.owner.name }}: {{ ownership.percentage }}%">
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="mt-2 flex flex-wrap gap-2">
+                                {% for ownership in current_ownerships %}
+                                <span class="inline-flex items-center text-xs">
+                                    <span class="w-3 h-3 rounded-full mr-1" style="background-color: hsl({{ forloop.counter0|add:forloop.counter0|add:forloop.counter0 }}0, 70%, 50%);"></span>
+                                    {{ ownership.owner.name }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-gray-500 text-sm">
+                        No ownership records.
+                        <a href="{% url 'ownership_create' %}?horse={{ horse.pk }}" class="text-indigo-600 hover:text-indigo-500">Add first owner</a>
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+
             <!-- Horse Details -->
             <div class="bg-white shadow rounded-lg">
                 <div class="px-4 py-5 border-b border-gray-200 sm:px-6">

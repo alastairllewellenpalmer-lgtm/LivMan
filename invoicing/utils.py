@@ -50,6 +50,7 @@ def group_line_items_by_horse(line_items):
             'horse_name': str,
             'items': [item, ...] (livery first, then extras sorted by date),
             'subtotal': Decimal,
+            'percentage': Decimal (ownership percentage, for display),
         }
     """
     groups = OrderedDict()
@@ -62,6 +63,7 @@ def group_line_items_by_horse(line_items):
                 'horse_name': item.horse.name if item.horse else 'Other Charges',
                 'items': [],
                 'subtotal': Decimal('0.00'),
+                'percentage': item.ownership_percentage or Decimal('100.00'),
             }
         groups[horse_id]['items'].append(item)
         groups[horse_id]['subtotal'] += item.line_total
@@ -86,6 +88,7 @@ def group_preview_charges_by_horse(all_charges):
             'horse_name': str,
             'charges': [charge_dict, ...],
             'subtotal': Decimal,
+            'percentage': Decimal (ownership percentage, for display),
         }
     """
     groups = OrderedDict()
@@ -99,6 +102,7 @@ def group_preview_charges_by_horse(all_charges):
                 'horse_name': horse.name if horse else 'Other Charges',
                 'charges': [],
                 'subtotal': Decimal('0.00'),
+                'percentage': charge.get('percentage', Decimal('100.00')),
             }
         groups[horse_id]['charges'].append(charge)
         groups[horse_id]['subtotal'] += charge['amount']

@@ -126,7 +126,7 @@
                 <!-- Horse header -->
                 <tr class="bg-gray-50">
                     <td colspan="2" class="px-6 py-3 text-sm font-bold text-gray-900">
-                        {{ group.horse_name }} (Owned 100.00%)
+                        {{ group.horse_name }}{% if group.percentage and group.percentage != 100 %} (Owned {{ group.percentage|floatformat:2 }}%){% endif %}
                     </td>
                 </tr>
                 {% for item in group.items %}

@@ -31,8 +31,8 @@ from health.models import (
     WormingTreatment,
 )
 
-from .forms import HorseForm, LocationForm, MoveHorseForm, OwnerForm, PlacementForm
-from .models import Horse, Invoice, Location, Owner, Placement, RateType
+from .forms import HorseForm, HorseOwnershipForm, LocationForm, MoveHorseForm, OwnerForm, PlacementForm
+from .models import Horse, HorseOwnership, Invoice, Location, Owner, Placement, RateType
 
 
 @login_required
@@ -187,6 +187,10 @@ class HorseDetailView(LoginRequiredMixin, DetailView):
         context['vaccinations'] = horse.vaccinations.all()[:5]
         context['farrier_visits'] = horse.farrier_visits.all()[:5]
         context['extra_charges'] = horse.extra_charges.all()[:10]
+        # Ownership records
+        context['current_ownerships'] = HorseOwnership.get_ownerships_at_date(
+            horse, timezone.now().date()
+        )
         # New sections
         context['worming_treatments'] = horse.worming_treatments.all()[:10]
         context['egg_counts'] = horse.worm_egg_counts.all()[:10]
@@ -427,3 +431,126 @@ class PlacementUpdateView(LoginRequiredMixin, UpdateView):
     form_class = PlacementForm
     template_name = 'placements/placement_form.html'
     success_url = reverse_lazy('placement_list')
+
+
+# Horse Ownership Views
+class HorseOwnershipListView(LoginRequiredMixin, ListView):
+    model = HorseOwnership
+    template_name = 'ownership/ownership_list.html'
+    context_object_name = 'ownerships'
+    paginate_by = 50
+
+    def get_queryset(self):
+        queryset = HorseOwnership.objects.select_related(
+            'horse', 'owner'
+        )
+
+        # Status filter
+        status = self.request.GET.get('status', 'active')
+        if status == 'active':
+            queryset = queryset.filter(end_date__isnull=True)
+        elif status == 'ended':
+            queryset = queryset.filter(end_date__isnull=False)
+
+        # Horse filter
+        horse = self.request.GET.get('horse')
+        if horse:
+            queryset = queryset.filter(horse_id=horse)
+
+        # Owner filter
+        owner = self.request.GET.get('owner')
+        if owner:
+            queryset = queryset.filter(owner_id=owner)
+
+        return queryset.order_by('-start_date', 'horse__name')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['current_status'] = self.request.GET.get('status', 'active')
+        context['horses'] = Horse.objects.filter(is_active=True)
+        context['owners'] = Owner.objects.all()
+        return context
+
+
+class HorseOwnershipCreateView(LoginRequiredMixin, CreateView):
+    model = HorseOwnership
+    form_class = HorseOwnershipForm
+    template_name = 'ownership/ownership_form.html'
+
+    def get_initial(self):
+        initial = super().get_initial()
+        horse_id = self.request.GET.get('horse')
+        if horse_id:
+            initial['horse'] = horse_id
+            initial['start_date'] = timezone.now().date()
+        return initial
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        horse_id = self.request.GET.get('horse')
+        if horse_id:
+            horse = get_object_or_404(Horse, pk=horse_id)
+            context['horse'] = horse
+            context['current_ownerships'] = HorseOwnership.get_ownerships_at_date(
+                horse, timezone.now().date()
+            )
+        return context
+
+    def get_success_url(self):
+        horse_id = self.request.GET.get('horse')
+        if horse_id:
+            return reverse_lazy('horse_detail', kwargs={'pk': horse_id})
+        return reverse_lazy('ownership_list')
+
+    def form_valid(self, form):
+        messages.success(
+            self.request,
+            f"Ownership record created: {form.instance.owner.name} owns "
+            f"{form.instance.percentage}% of {form.instance.horse.name}."
+        )
+        return super().form_valid(form)
+
+
+class HorseOwnershipUpdateView(LoginRequiredMixin, UpdateView):
+    model = HorseOwnership
+    form_class = HorseOwnershipForm
+    template_name = 'ownership/ownership_form.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['horse'] = self.object.horse
+        context['current_ownerships'] = HorseOwnership.get_ownerships_at_date(
+            self.object.horse, timezone.now().date()
+        ).exclude(pk=self.object.pk)
+        return context
+
+    def get_success_url(self):
+        return reverse_lazy('horse_detail', kwargs={'pk': self.object.horse.pk})
+
+    def form_valid(self, form):
+        messages.success(self.request, "Ownership record updated successfully.")
+        return super().form_valid(form)
+
+
+@login_required
+def horse_ownership_end(request, pk):
+    """End an ownership record."""
+    ownership = get_object_or_404(HorseOwnership, pk=pk)
+    horse = ownership.horse
+
+    if request.method == 'POST':
+        end_date = request.POST.get('end_date')
+        if end_date:
+            from datetime import datetime
+            ownership.end_date = datetime.strptime(end_date, '%Y-%m-%d').date()
+            ownership.save()
+            messages.success(
+                request,
+                f"Ownership of {ownership.owner.name} in {horse.name} ended."
+            )
+        return redirect('horse_detail', pk=horse.pk)
+
+    return render(request, 'ownership/ownership_end.html', {
+        'ownership': ownership,
+        'horse': horse,
+    })

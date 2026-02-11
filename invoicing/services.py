@@ -3,14 +3,16 @@ Invoice calculation and generation services.
 """
 
 from datetime import date, datetime, timedelta
-from decimal import Decimal
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import transaction
+from django.db.models import F
 from django.utils import timezone
 
 from billing.models import ExtraCharge
 from core.models import (
     BusinessSettings,
+    HorseOwnership,
     Invoice,
     InvoiceLineItem,
     Owner,
@@ -43,40 +45,84 @@ class InvoiceService:
 
     @staticmethod
     def calculate_livery_charges(owner, period_start, period_end):
-        """Calculate livery charges for an owner in a period."""
+        """Calculate livery charges for an owner in a period based on ownership percentages."""
         charges = []
 
-        # Get all placements for this owner that overlap with the period
-        # A placement overlaps if it started before period ends AND hasn't ended before period starts
-        placements = Placement.objects.filter(
+        # Get all ownerships for this owner that overlap with the period
+        ownerships = HorseOwnership.objects.filter(
             owner=owner,
             start_date__lte=period_end,
         ).exclude(
+            end_date__isnull=False,
             end_date__lt=period_start
-        ).select_related('horse', 'location', 'rate_type')
+        ).select_related('horse')
 
-        for placement in placements:
-            days = placement.get_days_in_period(period_start, period_end)
-            if days > 0:
-                amount = placement.calculate_charge(period_start, period_end)
-                eff_start, eff_end = placement.get_effective_dates_in_period(
+        for ownership in ownerships:
+            horse = ownership.horse
+
+            # Get the placements for this horse that overlap with the period
+            placements = Placement.objects.filter(
+                horse=horse,
+                start_date__lte=period_end,
+            ).exclude(
+                end_date__isnull=False,
+                end_date__lt=period_start
+            ).select_related('location', 'rate_type')
+
+            for placement in placements:
+                # Calculate the intersection of ownership period, placement period, and billing period
+                ownership_start, ownership_end = ownership.get_effective_dates_in_period(
                     period_start, period_end
                 )
-                # Rich description: "Grass Livery incl hay £5 per day - 59 days (6 Nov to 3 Jan 2026)"
+                placement_start, placement_end = placement.get_effective_dates_in_period(
+                    period_start, period_end
+                )
+
+                # Find the intersection
+                eff_start = max(ownership_start, placement_start)
+                eff_end = min(ownership_end, placement_end)
+
+                if eff_start > eff_end:
+                    continue  # No overlap
+
+                days = (eff_end - eff_start).days + 1
+                if days <= 0:
+                    continue
+
+                # Calculate full amount and owner's share
+                full_amount = days * placement.daily_rate
+                owner_amount = (full_amount * ownership.percentage / Decimal('100')).quantize(
+                    Decimal('0.01'), rounding=ROUND_HALF_UP
+                )
+
+                # Build description
                 rate_str = f"£{placement.daily_rate:g}"
                 date_from = format_date_short(eff_start)
                 date_to = format_date_short_year(eff_end)
-                description = (
-                    f"{placement.rate_type.name} {rate_str} per day "
-                    f"- {days} days ({date_from} to {date_to})"
-                )
+
+                # Include ownership percentage in description if not 100%
+                if ownership.percentage != Decimal('100.00'):
+                    description = (
+                        f"{placement.rate_type.name} {rate_str} per day "
+                        f"- {days} days ({date_from} to {date_to}) "
+                        f"@ {ownership.percentage:.2f}% ownership"
+                    )
+                else:
+                    description = (
+                        f"{placement.rate_type.name} {rate_str} per day "
+                        f"- {days} days ({date_from} to {date_to})"
+                    )
+
                 charges.append({
-                    'horse': placement.horse,
+                    'horse': horse,
                     'placement': placement,
+                    'ownership': ownership,
                     'description': description,
                     'days': days,
                     'daily_rate': placement.daily_rate,
-                    'amount': amount,
+                    'full_amount': full_amount,
+                    'amount': owner_amount,
+                    'percentage': ownership.percentage,
                     'line_type': 'livery',
                 })
 
@@ -84,26 +130,86 @@ class InvoiceService:
 
     @staticmethod
     def get_unbilled_charges(owner, period_end):
-        """Get extra charges that haven't been invoiced yet."""
-        charges = ExtraCharge.objects.filter(
+        """Get extra charges that haven't been invoiced yet.
+
+        Handles both direct charges (split_by_ownership=False) and
+        split charges (split_by_ownership=True).
+        """
+        charges = []
+
+        # Direct charges - go entirely to the specified owner
+        direct_charges = ExtraCharge.objects.filter(
             owner=owner,
             invoiced=False,
-            date__lte=period_end
+            date__lte=period_end,
+            split_by_ownership=False,
         ).select_related('horse', 'service_provider')
 
-        return [
-            {
+        for charge in direct_charges:
+            charges.append({
                 'horse': charge.horse,
                 'charge': charge,
+                'ownership': None,
                 'description': f"{charge.get_charge_type_display()} - {charge.description}",
                 'date': charge.date,
                 'days': 1,
                 'daily_rate': charge.amount,
+                'full_amount': charge.amount,
                 'amount': charge.amount,
+                'percentage': Decimal('100.00'),
                 'line_type': charge.charge_type,
-            }
-            for charge in charges
-        ]
+            })
+
+        # Split charges - need to find charges for horses this owner has ownership of
+        # and calculate their share based on ownership percentage at the charge date
+        split_charges = ExtraCharge.objects.filter(
+            invoiced=False,
+            date__lte=period_end,
+            split_by_ownership=True,
+        ).select_related('horse', 'service_provider')
+
+        for charge in split_charges:
+            # Get this owner's ownership percentage at the charge date
+            ownership = HorseOwnership.objects.filter(
+                horse=charge.horse,
+                owner=owner,
+                start_date__lte=charge.date,
+            ).exclude(
+                end_date__isnull=False,
+                end_date__lt=charge.date
+            ).first()
+
+            if not ownership:
+                continue  # Owner has no ownership of this horse at charge date
+
+            owner_amount = (charge.amount * ownership.percentage / Decimal('100')).quantize(
+                Decimal('0.01'), rounding=ROUND_HALF_UP
+            )
+
+            # Include ownership percentage in description if not 100%
+            if ownership.percentage != Decimal('100.00'):
+                description = (
+                    f"{charge.get_charge_type_display()} - {charge.description} "
+                    f"@ {ownership.percentage:.2f}% ownership"
+                )
+            else:
+                description = f"{charge.get_charge_type_display()} - {charge.description}"
+
+            charges.append({
+                'horse': charge.horse,
+                'charge': charge,
+                'ownership': ownership,
+                'description': description,
+                'date': charge.date,
+                'days': 1,
+                'daily_rate': charge.amount,
+                'full_amount': charge.amount,
+                'amount': owner_amount,
+                'percentage': ownership.percentage,
+                'line_type': charge.charge_type,
+            })
+
+        return charges
 
     @classmethod
     def calculate_invoice_preview(cls, owner, period_start, period_end):
@@ -156,6 +262,8 @@ class InvoiceService:
                 invoice=invoice,
                 horse=charge['horse'],
                 placement=charge['placement'],
+                ownership=charge.get('ownership'),
+                ownership_percentage=charge.get('percentage'),
                 line_type=InvoiceLineItem.LineType.LIVERY,
                 description=charge['description'],
                 quantity=Decimal(str(charge['days'])),
@@ -165,6 +273,10 @@ class InvoiceService:
 
         # Add extra charge line items
         extra_charges = cls.get_unbilled_charges(owner, period_end)
+
+        # Track which charges have been processed to handle split charges
+        processed_charges = set()
+
         for charge in extra_charges:
             line_type_map = {
                 'vet': InvoiceLineItem.LineType.VET,
@@ -186,6 +298,8 @@ class InvoiceService:
                 invoice=invoice,
                 horse=charge['horse'],
                 charge=charge['charge'],
+                ownership=charge.get('ownership'),
+                ownership_percentage=charge.get('percentage'),
                 line_type=line_type,
                 description=charge['description'],
                 quantity=Decimal('1'),
@@ -193,13 +307,47 @@ class InvoiceService:
                 line_total=charge['amount'],
             )
 
-            # Mark the charge as invoiced
-            charge['charge'].mark_as_invoiced(invoice)
+            # Mark the charge as invoiced only if it's a direct charge
+            # For split charges, we track them separately
+            extra_charge = charge['charge']
+            if not extra_charge.split_by_ownership:
+                extra_charge.mark_as_invoiced(invoice)
+            else:
+                # For split charges, track that we've processed this owner's portion
+                processed_charges.add(extra_charge.pk)
+
+        # For split charges, check if all owners have been invoiced
+        # and mark as invoiced if so
+        for charge_pk in processed_charges:
+            extra_charge = ExtraCharge.objects.get(pk=charge_pk)
+            if cls._all_owners_invoiced(extra_charge, period_end):
+                extra_charge.mark_as_invoiced(invoice)
 
         # Recalculate totals
         invoice.recalculate_totals()
 
         return invoice
+
+    @staticmethod
+    def _all_owners_invoiced(extra_charge, period_end):
+        """Check if all owners of a horse have been invoiced for a split charge."""
+        # Get all owners at the charge date
+        ownerships = HorseOwnership.get_ownerships_at_date(extra_charge.horse, extra_charge.date)
+
+        for ownership in ownerships:
+            # Check if this owner has an invoice covering the charge date
+            has_invoice = Invoice.objects.filter(
+                owner=ownership.owner,
+                period_end__gte=extra_charge.date,
+                line_items__charge=extra_charge,
+            ).exclude(
+                status=Invoice.Status.CANCELLED,
+            ).exists()
+
+            if not has_invoice:
+                return False
+
+        return True
 
     @staticmethod
     def generate_monthly_invoices(year, month):
@@ -210,16 +358,17 @@ class InvoiceService:
         first_day = date(year, month, 1)
         last_day = date(year, month, monthrange(year, month)[1])
 
-        # Get all owners with placements overlapping this period
-        owners_with_placements = Owner.objects.filter(
-            placements__start_date__lte=last_day,
+        # Get all owners with ownership records overlapping this period
+        owners_with_ownerships = Owner.objects.filter(
+            horse_ownerships__start_date__lte=last_day,
         ).exclude(
-            placements__end_date__lt=first_day
+            horse_ownerships__end_date__isnull=False,
+            horse_ownerships__end_date__lt=first_day
         ).distinct()
 
         invoices = []
         skipped = []
-        for owner in owners_with_placements:
+        for owner in owners_with_ownerships:
             existing = InvoiceService.check_for_overlapping_invoices(
                 owner, first_day, last_day
             )

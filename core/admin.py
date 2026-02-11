@@ -8,6 +8,7 @@ from django.utils.html import format_html
 from .models import (
     BusinessSettings,
     Horse,
+    HorseOwnership,
     Invoice,
     InvoiceLineItem,
     Location,
@@ -81,6 +82,23 @@ class PlacementAdmin(admin.ModelAdmin):
     readonly_fields = ['created_at', 'updated_at']
 
 
+@admin.register(HorseOwnership)
+class HorseOwnershipAdmin(admin.ModelAdmin):
+    list_display = [
+        'horse', 'owner', 'percentage', 'start_date', 'end_date', 'is_current'
+    ]
+    list_filter = ['owner', 'start_date']
+    search_fields = ['horse__name', 'owner__name']
+    date_hierarchy = 'start_date'
+    raw_id_fields = ['horse', 'owner']
+    readonly_fields = ['created_at', 'updated_at']
+
+    def is_current(self, obj):
+        return obj.end_date is None
+    is_current.boolean = True
+    is_current.short_description = 'Current'
+
+
 @admin.register(BusinessSettings)
 class BusinessSettingsAdmin(admin.ModelAdmin):
     list_display = ['business_name', 'email', 'phone', 'website', 'vat_registration', 'default_payment_terms']
@@ -123,8 +141,8 @@ class InvoiceAdmin(admin.ModelAdmin):
 class InvoiceLineItemAdmin(admin.ModelAdmin):
     list_display = [
         'invoice', 'horse', 'line_type', 'description',
-        'quantity', 'unit_price', 'line_total'
+        'quantity', 'unit_price', 'line_total', 'ownership_percentage'
     ]
     list_filter = ['line_type']
     search_fields = ['description', 'horse__name', 'invoice__invoice_number']
-    raw_id_fields = ['invoice', 'horse', 'placement', 'charge']
+    raw_id_fields = ['invoice', 'horse', 'placement', 'charge', 'ownership']

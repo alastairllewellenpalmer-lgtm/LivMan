@@ -33,4 +33,10 @@ urlpatterns = [
     path('placements/', views.PlacementListView.as_view(), name='placement_list'),
     path('placements/add/', views.PlacementCreateView.as_view(), name='placement_create'),
     path('placements/<int:pk>/edit/', views.PlacementUpdateView.as_view(), name='placement_update'),
+
+    # Horse Ownership
+    path('ownership/', views.HorseOwnershipListView.as_view(), name='ownership_list'),
+    path('ownership/add/', views.HorseOwnershipCreateView.as_view(), name='ownership_create'),
+    path('ownership/<int:pk>/edit/', views.HorseOwnershipUpdateView.as_view(), name='ownership_update'),
+    path('ownership/<int:pk>/end/', views.horse_ownership_end, name='ownership_end'),
 ]

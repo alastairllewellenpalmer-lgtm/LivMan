@@ -4,7 +4,10 @@ Forms for core app.
 
 from django import forms
 
-from .models import Horse, Location, Owner, Placement, RateType
+from datetime import date
+from decimal import Decimal
+
+from .models import Horse, HorseOwnership, Location, Owner, Placement, RateType
 
 
 class OwnerForm(forms.ModelForm):
@@ -126,3 +129,69 @@ class RateTypeForm(forms.ModelForm):
             'description': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 2}),
             'is_active': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
         }
+
+
+class HorseOwnershipForm(forms.ModelForm):
+    """Form for creating/updating horse ownership records."""
+
+    class Meta:
+        model = HorseOwnership
+        fields = ['horse', 'owner', 'percentage', 'start_date', 'end_date', 'notes']
+        widgets = {
+            'horse': forms.Select(attrs={'class': 'form-select'}),
+            'owner': forms.Select(attrs={'class': 'form-select'}),
+            'percentage': forms.NumberInput(attrs={
+                'class': 'form-input',
+                'step': '0.01',
+                'min': '0.01',
+                'max': '100.00',
+            }),
+            'start_date': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 2}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        horse = cleaned_data.get('horse')
+        percentage = cleaned_data.get('percentage')
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+
+        if start_date and end_date and end_date < start_date:
+            raise forms.ValidationError("End date cannot be before start date.")
+
+        if horse and start_date and percentage:
+            # Get existing ownerships at start_date
+            existing = HorseOwnership.get_ownerships_at_date(horse, start_date)
+            if self.instance.pk:
+                existing = existing.exclude(pk=self.instance.pk)
+
+            current_total = sum(o.percentage for o in existing)
+            available = Decimal('100.00') - current_total
+
+            if percentage > available:
+                owners_info = ', '.join(
+                    f'{o.owner.name} ({o.percentage}%)' for o in existing
+                )
+                if owners_info:
+                    self.add_error(
+                        'percentage',
+                        f"Only {available}% available. Current owners: {owners_info}"
+                    )
+                else:
+                    self.add_error(
+                        'percentage',
+                        f"Percentage cannot exceed 100%."
+                    )
+
+        return cleaned_data
+
+    def validate_unique(self):
+        super().validate_unique()
+        try:
+            self.instance.clean()
+        except forms.ValidationError:
+            raise
+        except Exception as e:
+            raise forms.ValidationError(str(e))

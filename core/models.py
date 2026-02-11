@@ -5,7 +5,7 @@ Core models for horse management system.
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils import timezone
 
@@ -165,9 +165,31 @@ class Horse(models.Model):
 
     @property
     def current_owner(self):
-        """Get the current owner."""
+        """Get the current owner (primary owner with highest percentage)."""
+        # First try to get from ownerships
+        ownerships = self.current_owners
+        if ownerships:
+            return max(ownerships, key=lambda o: o.percentage).owner
+        # Fall back to placement owner for backward compatibility
         placement = self.current_placement
         return placement.owner if placement else None
+
+    @property
+    def current_owners(self):
+        """Get all current ownership records with percentages."""
+        return HorseOwnership.get_ownerships_at_date(self, date.today())
+
+    def get_ownership_for_owner(self, owner, target_date=None):
+        """Get ownership record for a specific owner at a date."""
+        target_date = target_date or date.today()
+        return HorseOwnership.objects.filter(
+            horse=self,
+            owner=owner,
+            start_date__lte=target_date,
+        ).exclude(
+            end_date__isnull=False,
+            end_date__lt=target_date
+        ).first()
 
 
 class RateType(models.Model):
@@ -289,6 +311,105 @@ class Placement(models.Model):
         """Calculate the charge for this placement in a billing period."""
         days = self.get_days_in_period(period_start, period_end)
         return days * self.daily_rate
+
+
+class HorseOwnership(models.Model):
+    """Tracks ownership shares for a horse. Multiple owners can share a horse."""
+
+    horse = models.ForeignKey(
+        Horse,
+        on_delete=models.CASCADE,
+        related_name='ownerships'
+    )
+    owner = models.ForeignKey(
+        Owner,
+        on_delete=models.PROTECT,
+        related_name='horse_ownerships'
+    )
+    percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        validators=[
+            MinValueValidator(Decimal('0.01')),
+            MaxValueValidator(Decimal('100.00')),
+        ],
+        help_text="Ownership percentage (0.01 to 100.00)"
+    )
+    start_date = models.DateField()
+    end_date = models.DateField(null=True, blank=True)
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-start_date', 'owner__name']
+        verbose_name = "Horse Ownership"
+        verbose_name_plural = "Horse Ownerships"
+
+    def __str__(self):
+        return f"{self.horse.name} - {self.owner.name} ({self.percentage}%)"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        super().clean()
+
+        if not self.horse_id or not self.start_date or not self.percentage:
+            return
+
+        # Check for overlapping ownership for same horse/owner
+        overlapping = HorseOwnership.objects.filter(
+            horse=self.horse,
+            owner=self.owner,
+            start_date__lte=self.end_date or date(9999, 12, 31),
+        ).exclude(
+            end_date__isnull=False,
+            end_date__lt=self.start_date
+        )
+
+        if self.pk:
+            overlapping = overlapping.exclude(pk=self.pk)
+
+        if overlapping.exists():
+            raise ValidationError(
+                f"{self.owner.name} already has an overlapping ownership record for {self.horse.name}."
+            )
+
+        # Validate total percentage doesn't exceed 100%
+        other_ownerships = HorseOwnership.objects.filter(
+            horse=self.horse,
+            start_date__lte=self.start_date,
+        ).exclude(
+            end_date__isnull=False,
+            end_date__lt=self.start_date
+        )
+
+        if self.pk:
+            other_ownerships = other_ownerships.exclude(pk=self.pk)
+
+        total = sum(o.percentage for o in other_ownerships) + self.percentage
+
+        if total > Decimal('100.00'):
+            raise ValidationError(
+                f"Total ownership would be {total}% (max 100%). "
+                f"Current owners: {', '.join(f'{o.owner.name} ({o.percentage}%)' for o in other_ownerships)}"
+            )
+
+    @classmethod
+    def get_ownerships_at_date(cls, horse, target_date):
+        """Get all active ownerships for a horse at a specific date."""
+        return cls.objects.filter(
+            horse=horse,
+            start_date__lte=target_date,
+        ).exclude(
+            end_date__isnull=False,
+            end_date__lt=target_date
+        ).select_related('owner')
+
+    def get_effective_dates_in_period(self, period_start, period_end):
+        """Return (effective_start, effective_end) for a billing period."""
+        effective_start = max(self.start_date, period_start)
+        effective_end = min(self.end_date or period_end, period_end)
+        return (effective_start, effective_end)
 
 
 class BusinessSettings(models.Model):
@@ -460,6 +581,21 @@ class InvoiceLineItem(models.Model):
         null=True,
         blank=True,
         related_name='invoice_items'
+    )
+    ownership = models.ForeignKey(
+        'HorseOwnership',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='invoice_items',
+        help_text="The ownership record this line item is based on"
+    )
+    ownership_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Ownership percentage at time of invoice (for historical record)"
     )
     line_type = models.CharField(
         max_length=20,

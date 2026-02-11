@@ -84,6 +84,10 @@ class ExtraCharge(models.Model):
         decimal_places=2,
         validators=[MinValueValidator(Decimal('0.00'))],
     )
+    split_by_ownership = models.BooleanField(
+        default=True,
+        help_text="If True, split charge by ownership percentages. If False, charge entirely to selected owner."
+    )
     invoiced = models.BooleanField(default=False)
     invoice = models.ForeignKey(
         'core.Invoice',
