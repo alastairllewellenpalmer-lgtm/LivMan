@@ -5,12 +5,13 @@ Invoice calculation and generation services.
 from datetime import date, datetime, timedelta
 from decimal import Decimal
 
-from django.db import transaction
+from django.db import models, transaction
 from django.utils import timezone
 
 from billing.models import ExtraCharge
 from core.models import (
     BusinessSettings,
+    HorseOwnership,
     Invoice,
     InvoiceLineItem,
     Owner,
@@ -43,26 +44,78 @@ class InvoiceService:
 
     @staticmethod
     def calculate_livery_charges(owner, period_start, period_end):
-        """Calculate livery charges for an owner in a period."""
+        """Calculate livery charges for an owner in a period.
+
+        Supports fractional ownership - if a horse has HorseOwnership records,
+        the charge is split according to ownership percentages. Otherwise,
+        the full charge goes to the placement owner.
+        """
         charges = []
 
-        # Get all placements for this owner that overlap with the period
-        # A placement overlaps if it started before period ends AND hasn't ended before period starts
-        placements = Placement.objects.filter(
+        # First, get placements where this owner is the direct placement owner
+        # (for horses without fractional ownership records)
+        direct_placements = Placement.objects.filter(
             owner=owner,
             start_date__lte=period_end,
         ).exclude(
             end_date__lt=period_start
         ).select_related('horse', 'location', 'rate_type')
 
-        for placement in placements:
+        for placement in direct_placements:
             days = placement.get_days_in_period(period_start, period_end)
-            if days > 0:
-                amount = placement.calculate_charge(period_start, period_end)
+            if days <= 0:
+                continue
+
+            # Check if this horse has fractional ownership
+            ownership_shares = HorseOwnership.get_ownership_for_period(
+                placement.horse, period_start, period_end
+            )
+
+            if ownership_shares:
+                # Horse has fractional ownership - find this owner's share
+                owner_share = None
+                for share in ownership_shares:
+                    if share['owner'].id == owner.id:
+                        owner_share = share
+                        break
+
+                if not owner_share:
+                    # This owner doesn't have a share in this horse anymore
+                    continue
+
+                # Calculate the fractional amount
+                full_amount = placement.calculate_charge(period_start, period_end)
+                share_pct = owner_share['percentage'] / Decimal('100')
+                fractional_amount = (full_amount * share_pct).quantize(Decimal('0.01'))
+
                 eff_start, eff_end = placement.get_effective_dates_in_period(
                     period_start, period_end
                 )
-                # Rich description: "Grass Livery incl hay £5 per day - 59 days (6 Nov to 3 Jan 2026)"
+                rate_str = f"£{placement.daily_rate:g}"
+                date_from = format_date_short(eff_start)
+                date_to = format_date_short_year(eff_end)
+                description = (
+                    f"{placement.rate_type.name} {rate_str} per day "
+                    f"- {days} days ({date_from} to {date_to}) "
+                    f"[{owner_share['percentage']}% share]"
+                )
+                charges.append({
+                    'horse': placement.horse,
+                    'placement': placement,
+                    'description': description,
+                    'days': days,
+                    'daily_rate': placement.daily_rate,
+                    'amount': fractional_amount,
+                    'full_amount': full_amount,
+                    'share_percentage': owner_share['percentage'],
+                    'line_type': 'livery',
+                })
+            else:
+                # No fractional ownership - charge full amount to placement owner
+                full_amount = placement.calculate_charge(period_start, period_end)
+                eff_start, eff_end = placement.get_effective_dates_in_period(
+                    period_start, period_end
+                )
                 rate_str = f"£{placement.daily_rate:g}"
                 date_from = format_date_short(eff_start)
                 date_to = format_date_short_year(eff_end)
@@ -76,7 +129,60 @@ class InvoiceService:
                     'description': description,
                     'days': days,
                     'daily_rate': placement.daily_rate,
-                    'amount': amount,
+                    'amount': full_amount,
+                    'line_type': 'livery',
+                })
+
+        # Second, get placements for horses where this owner has fractional ownership
+        # but is NOT the direct placement owner
+        fractional_ownerships = HorseOwnership.objects.filter(
+            owner=owner,
+            effective_from__lte=period_end,
+        ).filter(
+            models.Q(effective_to__isnull=True) | models.Q(effective_to__gte=period_start)
+        ).select_related('horse')
+
+        for ownership in fractional_ownerships:
+            # Get placements for this horse in the period
+            horse_placements = Placement.objects.filter(
+                horse=ownership.horse,
+                start_date__lte=period_end,
+            ).exclude(
+                end_date__lt=period_start
+            ).exclude(
+                owner=owner  # Skip if already handled above
+            ).select_related('horse', 'location', 'rate_type', 'owner')
+
+            for placement in horse_placements:
+                days = placement.get_days_in_period(period_start, period_end)
+                if days <= 0:
+                    continue
+
+                # Calculate fractional amount based on ownership share
+                full_amount = placement.calculate_charge(period_start, period_end)
+                share_pct = ownership.share_percentage / Decimal('100')
+                fractional_amount = (full_amount * share_pct).quantize(Decimal('0.01'))
+
+                eff_start, eff_end = placement.get_effective_dates_in_period(
+                    period_start, period_end
+                )
+                rate_str = f"£{placement.daily_rate:g}"
+                date_from = format_date_short(eff_start)
+                date_to = format_date_short_year(eff_end)
+                description = (
+                    f"{placement.rate_type.name} {rate_str} per day "
+                    f"- {days} days ({date_from} to {date_to}) "
+                    f"[{ownership.share_percentage}% share]"
+                )
+                charges.append({
+                    'horse': placement.horse,
+                    'placement': placement,
+                    'description': description,
+                    'days': days,
+                    'daily_rate': placement.daily_rate,
+                    'amount': fractional_amount,
+                    'full_amount': full_amount,
+                    'share_percentage': ownership.share_percentage,
                     'line_type': 'livery',
                 })
 
@@ -203,23 +309,38 @@ class InvoiceService:
 
     @staticmethod
     def generate_monthly_invoices(year, month):
-        """Generate invoices for all owners for a given month."""
+        """Generate invoices for all owners for a given month.
+
+        Includes both direct placement owners and fractional owners.
+        """
         from calendar import monthrange
 
         # Calculate period
         first_day = date(year, month, 1)
         last_day = date(year, month, monthrange(year, month)[1])
 
-        # Get all owners with placements overlapping this period
-        owners_with_placements = Owner.objects.filter(
+        # Get all owners with direct placements overlapping this period
+        owners_with_placements = set(Owner.objects.filter(
             placements__start_date__lte=last_day,
         ).exclude(
             placements__end_date__lt=first_day
-        ).distinct()
+        ).values_list('id', flat=True))
+
+        # Get all owners with fractional ownership overlapping this period
+        owners_with_shares = set(Owner.objects.filter(
+            horse_ownerships__effective_from__lte=last_day,
+        ).filter(
+            models.Q(horse_ownerships__effective_to__isnull=True) |
+            models.Q(horse_ownerships__effective_to__gte=first_day)
+        ).values_list('id', flat=True))
+
+        # Combine both sets of owners
+        all_owner_ids = owners_with_placements | owners_with_shares
+        all_owners = Owner.objects.filter(id__in=all_owner_ids)
 
         invoices = []
         skipped = []
-        for owner in owners_with_placements:
+        for owner in all_owners:
             existing = InvoiceService.check_for_overlapping_invoices(
                 owner, first_day, last_day
             )
