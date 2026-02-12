@@ -247,7 +247,7 @@
         <tbody>
             {% for group in horse_groups %}
             <tr class="horse-header">
-                <td colspan="2">{{ group.horse_name }} (Owned 100.00%)</td>
+                <td colspan="2">{{ group.horse_name }}</td>
             </tr>
             {% for item in group.items %}
             {% if item.line_type == 'livery' %}

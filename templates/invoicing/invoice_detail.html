@@ -15,10 +15,16 @@
             <a href="{% url 'invoice_pdf' invoice.pk %}" class="btn btn-secondary">Download PDF</a>
             <a href="{% url 'invoice_csv' invoice.pk %}" class="btn btn-secondary">Download CSV</a>
             {% if invoice.status == 'draft' %}
-            <a href="{% url 'invoice_send' invoice.pk %}" class="btn btn-success">Send Invoice</a>
+            <form method="post" action="{% url 'invoice_send' invoice.pk %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success">Send Invoice</button>
+            </form>
             {% endif %}
             {% if invoice.status == 'sent' or invoice.status == 'overdue' %}
-            <a href="{% url 'invoice_mark_paid' invoice.pk %}" class="btn btn-primary">Mark as Paid</a>
+            <form method="post" action="{% url 'invoice_mark_paid' invoice.pk %}" class="inline">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary">Mark as Paid</button>
+            </form>
             {% endif %}
         </div>
     </div>
@@ -126,7 +132,7 @@
                 <!-- Horse header -->
                 <tr class="bg-gray-50">
                     <td colspan="2" class="px-6 py-3 text-sm font-bold text-gray-900">
-                        {{ group.horse_name }} (Owned 100.00%)
+                        {{ group.horse_name }}
                     </td>
                 </tr>
                 {% for item in group.items %}

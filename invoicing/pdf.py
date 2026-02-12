@@ -180,7 +180,7 @@ def generate_invoice_pdf_reportlab(invoice):
     for group in horse_groups:
         # Horse header row
         table_data.append([
-            Paragraph(f"<b>{group['horse_name']} (Owned 100.00%)</b>", item_style),
+            Paragraph(f"<b>{group['horse_name']}</b>", item_style),
             '',
         ])
         row_idx = len(table_data) - 1

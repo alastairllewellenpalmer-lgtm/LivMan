@@ -625,6 +625,6 @@ class InvoiceLineItem(models.Model):
 
     def save(self, *args, **kwargs):
         # Auto-calculate line total unless explicitly provided
-        if not self.line_total:
+        if self.line_total is None:
             self.line_total = self.quantity * self.unit_price
         super().save(*args, **kwargs)

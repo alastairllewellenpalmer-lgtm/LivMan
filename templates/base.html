@@ -66,9 +66,13 @@
         </div>
         <!-- Mobile menu -->
         <div class="md:hidden px-2 pb-3 space-y-1">
+            <a href="{% url 'dashboard' %}" class="text-white hover:bg-indigo-500 block px-3 py-2 rounded-md text-base font-medium">Dashboard</a>
             <a href="{% url 'horse_list' %}" class="text-indigo-200 hover:bg-indigo-500 block px-3 py-2 rounded-md text-base font-medium">Horses</a>
             <a href="{% url 'owner_list' %}" class="text-indigo-200 hover:bg-indigo-500 block px-3 py-2 rounded-md text-base font-medium">Owners</a>
             <a href="{% url 'location_list' %}" class="text-indigo-200 hover:bg-indigo-500 block px-3 py-2 rounded-md text-base font-medium">Locations</a>
+            <a href="{% url 'invoice_list' %}" class="text-indigo-200 hover:bg-indigo-500 block px-3 py-2 rounded-md text-base font-medium">Invoices</a>
+            <a href="{% url 'vaccination_list' %}" class="text-indigo-200 hover:bg-indigo-500 block px-3 py-2 rounded-md text-base font-medium">Health</a>
+            <a href="{% url 'charge_list' %}" class="text-indigo-200 hover:bg-indigo-500 block px-3 py-2 rounded-md text-base font-medium">Charges</a>
         </div>
     </nav>
 

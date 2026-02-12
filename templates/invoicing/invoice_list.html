@@ -92,7 +92,10 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm space-x-2">
                         <a href="{% url 'invoice_pdf' invoice.pk %}" class="text-indigo-600 hover:text-indigo-900">PDF</a>
                         {% if invoice.status == 'draft' %}
-                        <a href="{% url 'invoice_send' invoice.pk %}" class="text-green-600 hover:text-green-900">Send</a>
+                        <form method="post" action="{% url 'invoice_send' invoice.pk %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="text-green-600 hover:text-green-900 bg-transparent border-none cursor-pointer p-0 text-sm">Send</button>
+                        </form>
                         {% endif %}
                     </td>
                 </tr>
@@ -109,10 +112,10 @@
     <div class="flex justify-center">
         <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
             {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">Previous</a>
+            <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.owner %}&owner={{ request.GET.owner }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">Previous</a>
             {% endif %}
             {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">Next</a>
+            <a href="?page={{ page_obj.next_page_number }}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.owner %}&owner={{ request.GET.owner }}{% endif %}" class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50">Next</a>
             {% endif %}
         </nav>
     </div>
