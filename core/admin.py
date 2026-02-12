@@ -34,6 +34,19 @@ class LocationAdmin(admin.ModelAdmin):
     readonly_fields = ['created_at', 'updated_at']
 
 
+class PlacementInline(admin.TabularInline):
+    model = Placement
+    extra = 0
+    readonly_fields = ['created_at']
+
+
+class HorseOwnershipInline(admin.TabularInline):
+    model = HorseOwnership
+    extra = 0
+    readonly_fields = ['created_at']
+    fields = ['owner', 'share_percentage', 'effective_from', 'effective_to', 'is_billing_contact', 'notes']
+
+
 @admin.register(Horse)
 class HorseAdmin(admin.ModelAdmin):
     list_display = [
@@ -67,19 +80,6 @@ class RateTypeAdmin(admin.ModelAdmin):
     list_display = ['name', 'daily_rate', 'is_active']
     list_filter = ['is_active']
     search_fields = ['name']
-
-
-class PlacementInline(admin.TabularInline):
-    model = Placement
-    extra = 0
-    readonly_fields = ['created_at']
-
-
-class HorseOwnershipInline(admin.TabularInline):
-    model = HorseOwnership
-    extra = 0
-    readonly_fields = ['created_at']
-    fields = ['owner', 'share_percentage', 'effective_from', 'effective_to', 'is_billing_contact', 'notes']
 
 
 @admin.register(Placement)
