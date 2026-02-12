@@ -352,7 +352,10 @@ class InvoiceService:
             if invoice.total > 0:
                 invoices.append(invoice)
             else:
-                # Delete zero-total invoices to avoid orphaned records
+                # Un-mark any extra charges before deleting zero-total invoice
+                ExtraCharge.objects.filter(invoice=invoice).update(
+                    invoiced=False, invoice=None
+                )
                 invoice.delete()
 
         return invoices, skipped

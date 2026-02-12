@@ -173,6 +173,9 @@ def invoice_pdf(request, pk):
 @login_required
 def invoice_send(request, pk):
     """Send invoice via email."""
+    if request.method != 'POST':
+        return redirect('invoice_detail', pk=pk)
+
     invoice = get_object_or_404(Invoice, pk=pk)
 
     if invoice.status not in [Invoice.Status.DRAFT, Invoice.Status.SENT]:
@@ -200,6 +203,9 @@ def invoice_send(request, pk):
 @login_required
 def invoice_mark_paid(request, pk):
     """Mark invoice as paid."""
+    if request.method != 'POST':
+        return redirect('invoice_detail', pk=pk)
+
     invoice = get_object_or_404(Invoice, pk=pk)
     if invoice.status not in [Invoice.Status.SENT, Invoice.Status.OVERDUE]:
         messages.error(request, "Only sent or overdue invoices can be marked as paid.")
