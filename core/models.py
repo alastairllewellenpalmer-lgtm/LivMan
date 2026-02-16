@@ -247,6 +247,10 @@ class Placement(models.Model):
 
     class Meta:
         ordering = ['-start_date']
+        indexes = [
+            models.Index(fields=['horse', 'end_date'], name='placement_horse_end_idx'),
+            models.Index(fields=['end_date'], name='placement_end_date_idx'),
+        ]
 
     def __str__(self):
         status = "current" if self.is_current else f"ended {self.end_date}"
