@@ -48,31 +48,31 @@
                     <h3 class="text-lg leading-6 font-medium text-gray-900">Current Placement</h3>
                 </div>
                 <div class="px-4 py-5 sm:p-6">
-                    {% if horse.current_placement %}
+                    {% if current_placement %}
                     <dl class="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
                         <div>
                             <dt class="text-sm font-medium text-gray-500">Location</dt>
                             <dd class="mt-1 text-sm text-gray-900">
-                                <a href="{% url 'location_detail' horse.current_placement.location.pk %}" class="text-indigo-600 hover:text-indigo-500">
-                                    {{ horse.current_placement.location.name }}
+                                <a href="{% url 'location_detail' current_placement.location.pk %}" class="text-indigo-600 hover:text-indigo-500">
+                                    {{ current_placement.location.name }}
                                 </a>
                             </dd>
                         </div>
                         <div>
                             <dt class="text-sm font-medium text-gray-500">Owner</dt>
                             <dd class="mt-1 text-sm text-gray-900">
-                                <a href="{% url 'owner_detail' horse.current_placement.owner.pk %}" class="text-indigo-600 hover:text-indigo-500">
-                                    {{ horse.current_placement.owner.name }}
+                                <a href="{% url 'owner_detail' current_placement.owner.pk %}" class="text-indigo-600 hover:text-indigo-500">
+                                    {{ current_placement.owner.name }}
                                 </a>
                             </dd>
                         </div>
                         <div>
                             <dt class="text-sm font-medium text-gray-500">Rate</dt>
-                            <dd class="mt-1 text-sm text-gray-900">{{ horse.current_placement.rate_type.name }} (&pound;{{ horse.current_placement.rate_type.daily_rate }}/day)</dd>
+                            <dd class="mt-1 text-sm text-gray-900">{{ current_placement.rate_type.name }} (&pound;{{ current_placement.rate_type.daily_rate }}/day)</dd>
                         </div>
                         <div>
                             <dt class="text-sm font-medium text-gray-500">Arrived</dt>
-                            <dd class="mt-1 text-sm text-gray-900">{{ horse.current_placement.start_date }}</dd>
+                            <dd class="mt-1 text-sm text-gray-900">{{ current_placement.start_date }}</dd>
                         </div>
                     </dl>
                     {% else %}

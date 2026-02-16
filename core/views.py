@@ -183,23 +183,43 @@ class HorseDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         horse = self.object
-        context['placements'] = horse.placements.all()[:10]
-        context['vaccinations'] = horse.vaccinations.all()[:5]
-        context['farrier_visits'] = horse.farrier_visits.all()[:5]
-        context['extra_charges'] = horse.extra_charges.all()[:10]
-        # New sections
+
+        # Add select_related for ALL related fields accessed in template
+        context['placements'] = horse.placements.select_related(
+            'location', 'owner', 'rate_type'
+        )[:10]
+        context['vaccinations'] = horse.vaccinations.select_related(
+            'vaccination_type'
+        )[:5]
+        context['farrier_visits'] = horse.farrier_visits.select_related(
+            'service_provider'
+        )[:5]
+        context['extra_charges'] = horse.extra_charges.select_related(
+            'owner', 'service_provider'
+        )[:10]
+
+        # These don't need select_related (no related fields accessed in template)
         context['worming_treatments'] = horse.worming_treatments.all()[:10]
         context['egg_counts'] = horse.worm_egg_counts.all()[:10]
         context['medical_conditions'] = horse.medical_conditions.all()
         context['vet_visits'] = horse.vet_visits.select_related('vet').all()[:10]
+
         # Breeding (mare only)
         if horse.is_mare:
             context['breeding_records'] = horse.breeding_records.select_related('foal').all()
             context['active_pregnancy'] = horse.breeding_records.filter(
                 status__in=['covered', 'confirmed']
             ).first()
-        # Foals via dam FK
-        context['foals'] = horse.foals.all() if horse.is_mare else []
+
+        # Foals - use direct query instead of property to avoid extra query
+        context['foals'] = Horse.objects.filter(dam=horse) if horse.is_mare else []
+
+        # Prefetch current_placement with related fields to avoid N+1 in template
+        # Template accesses current_placement.location, .owner, .rate_type
+        context['current_placement'] = horse.placements.select_related(
+            'location', 'owner', 'rate_type'
+        ).filter(end_date__isnull=True).first()
+
         return context
 
 
