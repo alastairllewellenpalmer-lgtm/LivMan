@@ -111,8 +111,9 @@ if DATABASE_URL:
     DATABASES = {
         'default': env.db()
     }
-    DATABASES['default']['CONN_MAX_AGE'] = 600
+    DATABASES['default']['CONN_MAX_AGE'] = 0          # Close after each request (required for transaction pooling)
     DATABASES['default']['CONN_HEALTH_CHECKS'] = True
+    DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True  # Required for Supabase pooler
 else:
     DATABASES = {
         'default': {
