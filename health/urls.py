@@ -12,6 +12,11 @@ urlpatterns = [
     path('vaccinations/add/', views.VaccinationCreateView.as_view(), name='vaccination_create'),
     path('vaccinations/<int:pk>/edit/', views.VaccinationUpdateView.as_view(), name='vaccination_update'),
 
+    # Vaccination Types
+    path('vaccination-types/', views.VaccinationTypeListView.as_view(), name='vaccination_type_list'),
+    path('vaccination-types/add/', views.VaccinationTypeCreateView.as_view(), name='vaccination_type_create'),
+    path('vaccination-types/<int:pk>/edit/', views.VaccinationTypeUpdateView.as_view(), name='vaccination_type_update'),
+
     # Farrier
     path('farrier/', views.FarrierListView.as_view(), name='farrier_list'),
     path('farrier/add/', views.FarrierCreateView.as_view(), name='farrier_create'),

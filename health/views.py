@@ -21,6 +21,7 @@ from .forms import (
     FarrierVisitForm,
     MedicalConditionForm,
     VaccinationForm,
+    VaccinationTypeForm,
     VetVisitForm,
     WormEggCountForm,
     WormingTreatmentForm,
@@ -101,6 +102,48 @@ class VaccinationUpdateView(LoginRequiredMixin, UpdateView):
     form_class = VaccinationForm
     template_name = 'health/vaccination_form.html'
     success_url = reverse_lazy('vaccination_list')
+
+
+# ─── Vaccination Type Views ──────────────────────────────────────────
+
+class VaccinationTypeListView(LoginRequiredMixin, ListView):
+    model = VaccinationType
+    template_name = 'health/vaccination_type_list.html'
+    context_object_name = 'vaccination_types'
+
+    def get_queryset(self):
+        queryset = VaccinationType.objects.all()
+
+        # Filter by active status
+        status = self.request.GET.get('status')
+        if status == 'active':
+            queryset = queryset.filter(is_active=True)
+        elif status == 'inactive':
+            queryset = queryset.filter(is_active=False)
+
+        return queryset.order_by('name')
+
+
+class VaccinationTypeCreateView(LoginRequiredMixin, CreateView):
+    model = VaccinationType
+    form_class = VaccinationTypeForm
+    template_name = 'health/vaccination_type_form.html'
+    success_url = reverse_lazy('vaccination_type_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, f"Vaccination type '{form.instance.name}' created successfully.")
+        return super().form_valid(form)
+
+
+class VaccinationTypeUpdateView(LoginRequiredMixin, UpdateView):
+    model = VaccinationType
+    form_class = VaccinationTypeForm
+    template_name = 'health/vaccination_type_form.html'
+    success_url = reverse_lazy('vaccination_type_list')
+
+    def form_valid(self, form):
+        messages.success(self.request, f"Vaccination type '{form.instance.name}' updated successfully.")
+        return super().form_valid(form)
 
 
 # ─── Farrier Views ───────────────────────────────────────────────────
