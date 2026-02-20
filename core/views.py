@@ -2,14 +2,11 @@
 Views for core app.
 """
 
-import time
 from datetime import timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db import connection
-from django.http import JsonResponse
 from django.core.exceptions import ValidationError
 from django.db.models import Count, Prefetch, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
@@ -36,18 +33,6 @@ from health.models import (
 
 from .forms import HorseForm, LocationForm, MoveHorseForm, OwnerForm, PlacementForm
 from .models import Horse, Invoice, Location, Owner, Placement, RateType
-
-
-def health_check(request):
-    """Lightweight DB ping. No auth required. Used by Vercel cron to keep Supabase awake."""
-    start = time.monotonic()
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT 1")
-    db_ms = (time.monotonic() - start) * 1000
-    return JsonResponse({
-        "status": "ok",
-        "db_ping_ms": round(db_ms, 1),
-    })
 
 
 @login_required
