@@ -143,13 +143,15 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
-STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+_static_dir = BASE_DIR / 'static'
+STATICFILES_DIRS = [_static_dir] if _static_dir.is_dir() else []
 STORAGES = {
     'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
     },
 }
+WHITENOISE_USE_FINDERS = True
 
 # Media files (uploads)
 MEDIA_URL = 'media/'
