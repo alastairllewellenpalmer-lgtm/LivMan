@@ -128,7 +128,7 @@ class HorseListView(LoginRequiredMixin, ListView):
     model = Horse
     template_name = 'horses/horse_list.html'
     context_object_name = 'horses'
-    paginate_by = 50
+    paginate_by = 25
 
     def get_queryset(self):
         active_placements = Prefetch(
@@ -138,9 +138,9 @@ class HorseListView(LoginRequiredMixin, ListView):
             ).select_related('owner', 'location'),
             to_attr='active_placements',
         )
-        queryset = Horse.objects.filter(is_active=True).prefetch_related(
-            active_placements
-        )
+        queryset = Horse.objects.filter(is_active=True).only(
+            'id', 'name', 'age', 'date_of_birth', 'color', 'sex', 'is_active'
+        ).prefetch_related(active_placements)
 
         # Search filter
         search = self.request.GET.get('search')
@@ -176,8 +176,8 @@ class HorseListView(LoginRequiredMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['locations'] = Location.objects.all()
-        context['owners'] = Owner.objects.all()
+        context['locations'] = Location.objects.values('pk', 'name')
+        context['owners'] = Owner.objects.values('pk', 'name')
         return context
 
 
@@ -189,10 +189,20 @@ class HorseDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         horse = self.object
-        context['placements'] = horse.placements.all()[:10]
-        context['vaccinations'] = horse.vaccinations.all()[:5]
+        # Prefetch current placement once to avoid repeated DB hits in template
+        context['current_placement'] = horse.placements.filter(
+            end_date__isnull=True
+        ).select_related('owner', 'location', 'rate_type').first()
+        context['placements'] = horse.placements.select_related(
+            'owner', 'location', 'rate_type'
+        ).all()[:10]
+        context['vaccinations'] = horse.vaccinations.select_related(
+            'vaccination_type'
+        ).all()[:5]
         context['farrier_visits'] = horse.farrier_visits.all()[:5]
-        context['extra_charges'] = horse.extra_charges.all()[:10]
+        context['extra_charges'] = horse.extra_charges.select_related(
+            'owner'
+        ).all()[:10]
         # New sections
         context['worming_treatments'] = horse.worming_treatments.all()[:10]
         context['egg_counts'] = horse.worm_egg_counts.all()[:10]
@@ -205,7 +215,7 @@ class HorseDetailView(LoginRequiredMixin, DetailView):
                 status__in=['covered', 'confirmed']
             ).first()
         # Foals via dam FK
-        context['foals'] = horse.foals.all() if horse.is_mare else []
+        context['foals'] = Horse.objects.filter(dam=horse) if horse.is_mare else []
         return context
 
 
@@ -317,9 +327,22 @@ class OwnerDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['horses'] = self.object.active_horses
+        # Optimized: prefetch active placements with location to avoid N+1
+        active_placements = Prefetch(
+            'placements',
+            queryset=Placement.objects.filter(
+                end_date__isnull=True
+            ).select_related('location'),
+            to_attr='active_placements',
+        )
+        context['horses'] = Horse.objects.filter(
+            placements__owner=self.object,
+            placements__end_date__isnull=True
+        ).distinct().prefetch_related(active_placements)
         context['invoices'] = self.object.invoices.all()[:10]
-        context['extra_charges'] = self.object.extra_charges.filter(invoiced=False)
+        context['extra_charges'] = self.object.extra_charges.filter(
+            invoiced=False
+        ).select_related('horse')
         return context
 
 
@@ -361,7 +384,18 @@ class LocationDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['horses'] = self.object.current_horses
+        # Optimized: prefetch active placements with owner to avoid N+1
+        active_placements = Prefetch(
+            'placements',
+            queryset=Placement.objects.filter(
+                end_date__isnull=True
+            ).select_related('owner'),
+            to_attr='active_placements',
+        )
+        context['horses'] = Horse.objects.filter(
+            placements__location=self.object,
+            placements__end_date__isnull=True
+        ).distinct().prefetch_related(active_placements)
         return context
 
 
