@@ -1,108 +1,121 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if object %}Edit Breeding Record{% else %}Add Breeding Record{% endif %} - Horse Management{% endblock %}
+{% block title %}{% if object %}Edit Breeding Record{% else %}Add Breeding Record{% endif %} - Cgate{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto">
-    <div class="md:flex md:items-center md:justify-between mb-6">
-        <div class="min-w-0 flex-1">
-            <h1 class="text-2xl font-bold leading-7 text-gray-900">
-                {% if object %}Edit Breeding Record{% else %}Add Breeding Record{% endif %}
-            </h1>
+<div class="max-w-2xl mx-auto space-y-6">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">{% if object %}Edit Breeding Record{% else %}Add Breeding Record{% endif %}</h1>
+            <p class="page-subtitle">{% if object %}Update breeding record details below.{% else %}Record a new breeding event.{% endif %}</p>
         </div>
     </div>
 
-    <div class="bg-white shadow rounded-lg">
-        <form method="post" class="p-6 space-y-6">
+    <!-- Form -->
+    <div class="card">
+        <form method="post">
             {% csrf_token %}
 
-            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <!-- Mare & Stallion -->
-                <div>
-                    <label for="id_mare" class="block text-sm font-medium text-gray-700">Mare *</label>
-                    {{ form.mare }}
-                </div>
+            <!-- Mare & Stallion -->
+            <fieldset class="p-5 space-y-5">
+                <legend class="section-title">Mare &amp; Stallion</legend>
 
-                <div>
-                    <label for="id_stallion_name" class="block text-sm font-medium text-gray-700">Stallion Name *</label>
-                    {{ form.stallion_name }}
-                </div>
-
-                <!-- Dates -->
-                <div>
-                    <label for="id_date_covered" class="block text-sm font-medium text-gray-700">Date Covered *</label>
-                    {{ form.date_covered }}
-                </div>
-
-                <div>
-                    <label for="id_status" class="block text-sm font-medium text-gray-700">Status *</label>
-                    {{ form.status }}
-                </div>
-
-                <!-- Scanning -->
-                <div>
-                    <label for="id_date_scanned_14_days" class="block text-sm font-medium text-gray-700">14-Day Scan</label>
-                    {{ form.date_scanned_14_days }}
-                    <p class="mt-1 text-sm text-gray-500">In-foal confirmation scan</p>
-                </div>
-
-                <div>
-                    <label for="id_date_scanned_heartbeat" class="block text-sm font-medium text-gray-700">Heartbeat Scan</label>
-                    {{ form.date_scanned_heartbeat }}
-                </div>
-
-                <div>
-                    <label for="id_date_foal_due" class="block text-sm font-medium text-gray-700">Foal Due Date</label>
-                    {{ form.date_foal_due }}
-                    <p class="mt-1 text-sm text-gray-500">Leave blank to auto-calculate (~340 days from covering)</p>
-                </div>
-            </div>
-
-            <!-- Foal Details (collapsible section) -->
-            <div class="border-t pt-6">
-                <h3 class="text-lg font-medium text-gray-900 mb-4">Foal Details</h3>
-                <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
                     <div>
-                        <label for="id_foal" class="block text-sm font-medium text-gray-700">Foal (Horse Record)</label>
-                        {{ form.foal }}
-                        <p class="mt-1 text-sm text-gray-500">Link to the foal's horse record once created</p>
+                        <label for="{{ form.mare.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.mare.label }}</label>
+                        {{ form.mare }}
                     </div>
 
                     <div>
-                        <label for="id_foal_dob" class="block text-sm font-medium text-gray-700">Foal DOB</label>
+                        <label for="{{ form.stallion_name.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.stallion_name.label }}</label>
+                        {{ form.stallion_name }}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.date_covered.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.date_covered.label }}</label>
+                        {{ form.date_covered }}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.status.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.status.label }}</label>
+                        {{ form.status }}
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- Scanning -->
+            <fieldset class="p-5 space-y-5 border-t border-slate-200">
+                <legend class="section-title">Scanning</legend>
+
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <div>
+                        <label for="{{ form.date_scanned_14_days.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.date_scanned_14_days.label }}</label>
+                        {{ form.date_scanned_14_days }}
+                        <p class="text-xs text-slate-400 mt-1">In-foal confirmation scan</p>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.date_scanned_heartbeat.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.date_scanned_heartbeat.label }}</label>
+                        {{ form.date_scanned_heartbeat }}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.date_foal_due.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.date_foal_due.label }}</label>
+                        {{ form.date_foal_due }}
+                        <p class="text-xs text-slate-400 mt-1">Leave blank to auto-calculate (~340 days from covering)</p>
+                    </div>
+                </div>
+            </fieldset>
+
+            <!-- Foal Details -->
+            <fieldset class="p-5 space-y-5 border-t border-slate-200">
+                <legend class="section-title">Foal Details</legend>
+
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <div>
+                        <label for="{{ form.foal.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.foal.label }}</label>
+                        {{ form.foal }}
+                        <p class="text-xs text-slate-400 mt-1">Link to the foal's horse record</p>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.foal_dob.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.foal_dob.label }}</label>
                         {{ form.foal_dob }}
                     </div>
 
                     <div>
-                        <label for="id_foal_sex" class="block text-sm font-medium text-gray-700">Foal Sex</label>
+                        <label for="{{ form.foal_sex.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.foal_sex.label }}</label>
                         {{ form.foal_sex }}
                     </div>
 
                     <div>
-                        <label for="id_foal_colour" class="block text-sm font-medium text-gray-700">Foal Colour</label>
+                        <label for="{{ form.foal_colour.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.foal_colour.label }}</label>
                         {{ form.foal_colour }}
                     </div>
 
                     <div class="sm:col-span-2">
-                        <label for="id_foal_microchip" class="block text-sm font-medium text-gray-700">Foal Microchip</label>
+                        <label for="{{ form.foal_microchip.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.foal_microchip.label }}</label>
                         {{ form.foal_microchip }}
                     </div>
 
                     <div class="sm:col-span-2">
-                        <label for="id_foaling_notes" class="block text-sm font-medium text-gray-700">Foaling Notes</label>
+                        <label for="{{ form.foaling_notes.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.foaling_notes.label }}</label>
                         {{ form.foaling_notes }}
-                        <p class="mt-1 text-sm text-gray-500">Foaling ease, confirmation details, etc.</p>
+                        <p class="text-xs text-slate-400 mt-1">Foaling ease, confirmation details, etc.</p>
                     </div>
                 </div>
-            </div>
+            </fieldset>
 
-            <div class="flex justify-end space-x-3 pt-6 border-t">
-                <a href="{% url 'breeding_list' %}" class="btn btn-secondary">Cancel</a>
-                <button type="submit" class="btn btn-primary">
+            <footer class="border-t px-5 py-4 bg-slate-50 rounded-b-xl flex justify-end gap-3">
+                <a href="{% url 'breeding_list' %}" class="btn-secondary">Cancel</a>
+                <button type="submit" class="btn-primary">
                     {% if object %}Save Changes{% else %}Add Breeding Record{% endif %}
                 </button>
-            </div>
+            </footer>
         </form>
     </div>
+
 </div>
 {% endblock %}

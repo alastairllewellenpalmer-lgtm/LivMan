@@ -1,76 +1,83 @@
 {% extends 'base.html' %}
 
-{% block title %}{% if object %}Edit Vet Visit{% else %}Add Vet Visit{% endif %} - Horse Management{% endblock %}
+{% block title %}{% if object %}Edit Vet Visit{% else %}Add Vet Visit{% endif %} - Cgate{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto">
-    <div class="md:flex md:items-center md:justify-between mb-6">
-        <div class="min-w-0 flex-1">
-            <h1 class="text-2xl font-bold leading-7 text-gray-900">
-                {% if object %}Edit Vet Visit{% else %}Add Vet Visit{% endif %}
-            </h1>
+<div class="max-w-2xl mx-auto space-y-6">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">{% if object %}Edit Vet Visit{% else %}Add Vet Visit{% endif %}</h1>
+            <p class="page-subtitle">{% if object %}Update vet visit details below.{% else %}Record a new vet visit.{% endif %}</p>
         </div>
     </div>
 
-    <div class="bg-white shadow rounded-lg">
-        <form method="post" class="p-6 space-y-6">
+    <!-- Form -->
+    <div class="card">
+        <form method="post">
             {% csrf_token %}
 
-            <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                <div class="sm:col-span-2">
-                    <label for="id_horse" class="block text-sm font-medium text-gray-700">Horse *</label>
-                    {{ form.horse }}
-                </div>
+            <fieldset class="p-5 space-y-5">
+                <legend class="section-title">Visit Details</legend>
 
-                <div>
-                    <label for="id_date" class="block text-sm font-medium text-gray-700">Date *</label>
-                    {{ form.date }}
-                </div>
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <div class="sm:col-span-2">
+                        <label for="{{ form.horse.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.horse.label }}</label>
+                        {{ form.horse }}
+                    </div>
 
-                <div>
-                    <label for="id_vet" class="block text-sm font-medium text-gray-700">Vet</label>
-                    {{ form.vet }}
-                </div>
+                    <div>
+                        <label for="{{ form.date.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.date.label }}</label>
+                        {{ form.date }}
+                    </div>
 
-                <div class="sm:col-span-2">
-                    <label for="id_reason" class="block text-sm font-medium text-gray-700">Reason *</label>
-                    {{ form.reason }}
-                </div>
+                    <div>
+                        <label for="{{ form.vet.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.vet.label }}</label>
+                        {{ form.vet }}
+                    </div>
 
-                <div class="sm:col-span-2">
-                    <label for="id_diagnosis" class="block text-sm font-medium text-gray-700">Diagnosis</label>
-                    {{ form.diagnosis }}
-                </div>
+                    <div class="sm:col-span-2">
+                        <label for="{{ form.reason.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.reason.label }}</label>
+                        {{ form.reason }}
+                    </div>
 
-                <div class="sm:col-span-2">
-                    <label for="id_treatment" class="block text-sm font-medium text-gray-700">Treatment</label>
-                    {{ form.treatment }}
-                </div>
+                    <div class="sm:col-span-2">
+                        <label for="{{ form.diagnosis.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.diagnosis.label }}</label>
+                        {{ form.diagnosis }}
+                    </div>
 
-                <div>
-                    <label for="id_follow_up_date" class="block text-sm font-medium text-gray-700">Follow-up Date</label>
-                    {{ form.follow_up_date }}
-                </div>
+                    <div class="sm:col-span-2">
+                        <label for="{{ form.treatment.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.treatment.label }}</label>
+                        {{ form.treatment }}
+                    </div>
 
-                <div>
-                    <label for="id_cost" class="block text-sm font-medium text-gray-700">Cost (&pound;)</label>
-                    {{ form.cost }}
-                    <p class="mt-1 text-sm text-gray-500">If &gt; &pound;0, a billable charge will be created</p>
-                </div>
+                    <div>
+                        <label for="{{ form.follow_up_date.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.follow_up_date.label }}</label>
+                        {{ form.follow_up_date }}
+                    </div>
 
-                <div class="sm:col-span-2">
-                    <label for="id_notes" class="block text-sm font-medium text-gray-700">Notes</label>
-                    {{ form.notes }}
-                </div>
-            </div>
+                    <div>
+                        <label for="{{ form.cost.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.cost.label }}</label>
+                        {{ form.cost }}
+                        <p class="text-xs text-slate-400 mt-1">If &gt; &pound;0, a billable charge will be created</p>
+                    </div>
 
-            <div class="flex justify-end space-x-3 pt-6 border-t">
-                <a href="{% url 'vet_visit_list' %}" class="btn btn-secondary">Cancel</a>
-                <button type="submit" class="btn btn-primary">
+                    <div class="sm:col-span-2">
+                        <label for="{{ form.notes.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.notes.label }}</label>
+                        {{ form.notes }}
+                    </div>
+                </div>
+            </fieldset>
+
+            <footer class="border-t px-5 py-4 bg-slate-50 rounded-b-xl flex justify-end gap-3">
+                <a href="{% url 'vet_visit_list' %}" class="btn-secondary">Cancel</a>
+                <button type="submit" class="btn-primary">
                     {% if object %}Save Changes{% else %}Add Vet Visit{% endif %}
                 </button>
-            </div>
+            </footer>
         </form>
     </div>
+
 </div>
 {% endblock %}
