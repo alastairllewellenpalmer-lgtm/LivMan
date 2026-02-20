@@ -95,10 +95,30 @@
 
         /* Link styling */
         .link { @apply text-amber-700 hover:text-amber-800 font-medium transition-colors duration-100; }
+
+        /* Progress bar glow */
+        #htmx-progress { box-shadow: 0 0 8px rgba(245, 158, 11, 0.6); }
+
+        /* Page entrance animation */
+        @keyframes page-in {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .page-enter { animation: page-in 0.2s ease-out both; }
+
+        /* Nav click feedback */
+        .nav-link.htmx-request,
+        .nav-link-active.htmx-request { @apply opacity-60; }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-slate-50 font-sans antialiased" x-data="{ sidebarOpen: false }">
+<body class="bg-slate-50 font-sans antialiased" x-data="{ sidebarOpen: false }" hx-boost="true">
+
+    <!-- ── Progress Bar ── -->
+    <div id="htmx-progress"
+         class="fixed top-0 left-0 z-[100] h-0.5 bg-amber-500"
+         style="width: 0%; opacity: 0; transition: none;">
+    </div>
 
     <!-- ── Mobile Overlay ── -->
     <div x-show="sidebarOpen" x-transition:enter="transition-opacity ease-linear duration-200"
@@ -277,7 +297,7 @@
         {% endif %}
 
         <!-- Main content -->
-        <main class="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-7xl w-full mx-auto">
+        <main id="main-content" class="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-7xl w-full mx-auto">
             {% block content %}{% endblock %}
         </main>
 
@@ -288,6 +308,58 @@
             </div>
         </footer>
     </div>
+
+<script>
+(function () {
+    var bar = document.getElementById('htmx-progress');
+    var barTimer = null;
+
+    // ── Progress bar ──
+    document.body.addEventListener('htmx:beforeRequest', function (e) {
+        if (!e.detail.boosted) return;
+        clearTimeout(barTimer);
+        bar.style.transition = 'none';
+        bar.style.width = '0%';
+        bar.style.opacity = '1';
+        requestAnimationFrame(function () {
+            bar.style.transition = 'width 1.5s cubic-bezier(0.1, 0.05, 0, 1)';
+            bar.style.width = '70%';
+        });
+    });
+
+    document.body.addEventListener('htmx:afterRequest', function (e) {
+        if (!e.detail.boosted) return;
+        bar.style.transition = 'width 0.15s ease-out';
+        bar.style.width = '100%';
+        barTimer = setTimeout(function () {
+            bar.style.transition = 'opacity 0.25s ease-in';
+            bar.style.opacity = '0';
+            setTimeout(function () {
+                bar.style.transition = 'none';
+                bar.style.width = '0%';
+            }, 250);
+        }, 150);
+    });
+
+    // ── Page entrance animation ──
+    document.body.addEventListener('htmx:afterSwap', function () {
+        var main = document.getElementById('main-content');
+        if (!main) return;
+        main.classList.remove('page-enter');
+        void main.offsetWidth;
+        main.classList.add('page-enter');
+    });
+
+    // ── Close mobile sidebar on navigate ──
+    document.body.addEventListener('htmx:beforeRequest', function (e) {
+        if (!e.detail.boosted) return;
+        var data = document.body._x_dataStack;
+        if (data && data[0] && data[0].sidebarOpen) {
+            data[0].sidebarOpen = false;
+        }
+    });
+})();
+</script>
 
 </body>
 </html>
