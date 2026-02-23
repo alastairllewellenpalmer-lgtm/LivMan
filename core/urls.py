@@ -16,6 +16,7 @@ urlpatterns = [
     path('horses/<int:pk>/', views.HorseDetailView.as_view(), name='horse_detail'),
     path('horses/<int:pk>/edit/', views.HorseUpdateView.as_view(), name='horse_update'),
     path('horses/<int:pk>/move/', views.horse_move, name='horse_move'),
+    path('horses/<int:pk>/ownership/', views.manage_ownership_shares, name='horse_ownership'),
 
     # Owners
     path('owners/', views.OwnerListView.as_view(), name='owner_list'),

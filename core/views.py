@@ -11,7 +11,7 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import connection
 from django.http import JsonResponse
 from django.core.exceptions import ValidationError
-from django.db.models import Count, Prefetch, Q, Sum
+from django.db.models import Count, Exists, OuterRef, Prefetch, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse_lazy
 from django.utils import timezone
@@ -34,8 +34,23 @@ from health.models import (
     WormingTreatment,
 )
 
-from .forms import HorseForm, LocationForm, MoveHorseForm, OwnerForm, PlacementForm
-from .models import Horse, Invoice, Location, Owner, Placement, RateType
+from .forms import (
+    HorseForm, LocationForm, MoveHorseForm, OwnerForm,
+    OwnershipShareFormSet, PlacementForm,
+)
+from .models import Horse, Invoice, Location, Owner, OwnershipShare, Placement, RateType
+
+
+def health_check(request):
+    """Lightweight DB ping. No auth required. Used by Vercel cron to keep Supabase awake."""
+    start = time.monotonic()
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT 1")
+    db_ms = (time.monotonic() - start) * 1000
+    return JsonResponse({
+        "status": "ok",
+        "db_ping_ms": round(db_ms, 1),
+    })
 
 
 def health_check(request):
@@ -66,11 +81,12 @@ def dashboard(request):
         )
     ).filter(horse_count__gt=0).order_by('-horse_count')
 
-    # Owner summary
+    # Owner summary (via ownership shares)
     owners_with_horses = Owner.objects.annotate(
         horse_count=Count(
-            'placements',
-            filter=Q(placements__end_date__isnull=True)
+            'ownership_shares',
+            filter=Q(ownership_shares__horse__is_active=True),
+            distinct=True,
         )
     ).filter(horse_count__gt=0).order_by('-horse_count')[:10]
 
@@ -143,7 +159,7 @@ class HorseListView(LoginRequiredMixin, ListView):
     model = Horse
     template_name = 'horses/horse_list.html'
     context_object_name = 'horses'
-    paginate_by = 50
+    paginate_by = 25
 
     def get_queryset(self):
         active_placements = Prefetch(
@@ -153,9 +169,9 @@ class HorseListView(LoginRequiredMixin, ListView):
             ).select_related('owner', 'location'),
             to_attr='active_placements',
         )
-        queryset = Horse.objects.filter(is_active=True).prefetch_related(
-            active_placements
-        )
+        queryset = Horse.objects.filter(is_active=True).only(
+            'id', 'name', 'age', 'date_of_birth', 'color', 'sex', 'is_active'
+        ).prefetch_related(active_placements)
 
         # Search filter
         search = self.request.GET.get('search')
@@ -169,24 +185,30 @@ class HorseListView(LoginRequiredMixin, ListView):
         location = self.request.GET.get('location')
         if location:
             queryset = queryset.filter(
-                placements__location_id=location,
-                placements__end_date__isnull=True
+                Exists(Placement.objects.filter(
+                    horse=OuterRef('pk'),
+                    location_id=location,
+                    end_date__isnull=True,
+                ))
             )
 
         # Owner filter
         owner = self.request.GET.get('owner')
         if owner:
             queryset = queryset.filter(
-                placements__owner_id=owner,
-                placements__end_date__isnull=True
+                Exists(Placement.objects.filter(
+                    horse=OuterRef('pk'),
+                    owner_id=owner,
+                    end_date__isnull=True,
+                ))
             )
 
-        return queryset.distinct().order_by('name')
+        return queryset.order_by('name')
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['locations'] = Location.objects.all()
-        context['owners'] = Owner.objects.all()
+        context['locations'] = Location.objects.values('pk', 'name')
+        context['owners'] = Owner.objects.values('pk', 'name')
         return context
 
 
@@ -198,10 +220,21 @@ class HorseDetailView(LoginRequiredMixin, DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         horse = self.object
-        context['placements'] = horse.placements.all()[:10]
-        context['vaccinations'] = horse.vaccinations.all()[:5]
+        # Prefetch current placement once to avoid repeated DB hits in template
+        context['current_placement'] = horse.placements.filter(
+            end_date__isnull=True
+        ).select_related('owner', 'location', 'rate_type').first()
+        context['placements'] = horse.placements.select_related(
+            'owner', 'location', 'rate_type'
+        ).all()[:10]
+        context['vaccinations'] = horse.vaccinations.select_related(
+            'vaccination_type'
+        ).all()[:5]
         context['farrier_visits'] = horse.farrier_visits.all()[:5]
-        context['extra_charges'] = horse.extra_charges.all()[:10]
+        context['extra_charges'] = horse.extra_charges.select_related(
+            'owner'
+        ).all()[:10]
+        context['ownership_shares'] = horse.ownership_shares.select_related('owner').all()
         # New sections
         context['worming_treatments'] = horse.worming_treatments.all()[:10]
         context['egg_counts'] = horse.worm_egg_counts.all()[:10]
@@ -214,7 +247,7 @@ class HorseDetailView(LoginRequiredMixin, DetailView):
                 status__in=['covered', 'confirmed']
             ).first()
         # Foals via dam FK
-        context['foals'] = horse.foals.all() if horse.is_mare else []
+        context['foals'] = Horse.objects.filter(dam=horse) if horse.is_mare else []
         return context
 
 
@@ -262,6 +295,8 @@ def horse_move(request, pk):
             new_owner = form.cleaned_data['new_owner']
             new_rate_type = form.cleaned_data['new_rate_type']
 
+            if not new_owner:
+                new_owner = horse.primary_owner
             if not new_owner and current_placement:
                 new_owner = current_placement.owner
             if not new_rate_type and current_placement:
@@ -313,8 +348,9 @@ class OwnerListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         return Owner.objects.annotate(
             horse_count=Count(
-                'placements',
-                filter=Q(placements__end_date__isnull=True)
+                'ownership_shares',
+                filter=Q(ownership_shares__horse__is_active=True),
+                distinct=True,
             )
         ).order_by('name')
 
@@ -326,9 +362,32 @@ class OwnerDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['horses'] = self.object.active_horses
+        # Optimized: prefetch active placements with location to avoid N+1
+        active_placements = Prefetch(
+            'placements',
+            queryset=Placement.objects.filter(
+                end_date__isnull=True
+            ).select_related('location'),
+            to_attr='active_placements',
+        )
+        # Get horses via ownership shares, annotate with share %
+        shares = OwnershipShare.objects.filter(owner=self.object).select_related('horse')
+        share_map = {s.horse_id: s.share_percentage for s in shares}
+
+        horses = Horse.objects.filter(
+            ownership_shares__owner=self.object,
+            is_active=True,
+        ).distinct().prefetch_related(active_placements)
+
+        # Attach share_pct to each horse for template use
+        for horse in horses:
+            horse.share_pct = share_map.get(horse.pk)
+
+        context['horses'] = horses
         context['invoices'] = self.object.invoices.all()[:10]
-        context['extra_charges'] = self.object.extra_charges.filter(invoiced=False)
+        context['extra_charges'] = self.object.extra_charges.filter(
+            invoiced=False
+        ).select_related('horse')
         return context
 
 
@@ -370,7 +429,18 @@ class LocationDetailView(LoginRequiredMixin, DetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['horses'] = self.object.current_horses
+        # Optimized: prefetch active placements with owner to avoid N+1
+        active_placements = Prefetch(
+            'placements',
+            queryset=Placement.objects.filter(
+                end_date__isnull=True
+            ).select_related('owner'),
+            to_attr='active_placements',
+        )
+        context['horses'] = Horse.objects.filter(
+            placements__location=self.object,
+            placements__end_date__isnull=True
+        ).distinct().prefetch_related(active_placements)
         return context
 
 
@@ -442,3 +512,35 @@ class PlacementUpdateView(LoginRequiredMixin, UpdateView):
     form_class = PlacementForm
     template_name = 'placements/placement_form.html'
     success_url = reverse_lazy('placement_list')
+
+
+@login_required
+def manage_ownership_shares(request, pk):
+    """Manage fractional ownership shares for a horse."""
+    horse = get_object_or_404(Horse, pk=pk)
+
+    if request.method == 'POST':
+        formset = OwnershipShareFormSet(request.POST, instance=horse)
+        if formset.is_valid():
+            formset.save()
+            total = sum(
+                f.cleaned_data.get('share_percentage', 0) or 0
+                for f in formset
+                if f.cleaned_data and not f.cleaned_data.get('DELETE', False)
+            )
+            if total < 100:
+                messages.warning(
+                    request,
+                    f"Total ownership is {total}% (less than 100%). "
+                    "This horse has unallocated ownership."
+                )
+            else:
+                messages.success(request, f"Ownership shares for {horse.name} updated.")
+            return redirect('horse_detail', pk=horse.pk)
+    else:
+        formset = OwnershipShareFormSet(instance=horse)
+
+    return render(request, 'horses/horse_ownership.html', {
+        'horse': horse,
+        'formset': formset,
+    })

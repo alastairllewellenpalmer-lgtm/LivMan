@@ -86,6 +86,9 @@
                 <li class="px-5 py-3.5 flex items-center justify-between hover:bg-slate-50/50 transition-colors duration-100">
                     <div>
                         <a href="{% url 'horse_detail' horse.pk %}" class="link text-sm">{{ horse.name }}</a>
+                        {% if horse.share_pct and horse.share_pct < 100 %}
+                        <span class="badge-info ml-1 text-xs">{{ horse.share_pct|floatformat:0 }}%</span>
+                        {% endif %}
                         <p class="text-xs text-slate-500 mt-0.5">
                             {% if horse.age %}{{ horse.age }}yo{% endif %}
                             {{ horse.get_color_display }}

@@ -3,6 +3,7 @@ Django admin configuration for core models.
 """
 
 from django.contrib import admin
+from django.db.models import Count, Prefetch, Q
 from django.utils.html import format_html
 
 from .models import (
@@ -13,6 +14,7 @@ from .models import (
     InvoiceLineItem,
     Location,
     Owner,
+    OwnershipShare,
     Placement,
     RateType,
 )
@@ -20,18 +22,52 @@ from .models import (
 
 @admin.register(Owner)
 class OwnerAdmin(admin.ModelAdmin):
-    list_display = ['name', 'email', 'phone', 'account_code', 'active_horse_count', 'created_at']
+    list_display = ['name', 'email', 'phone', 'account_code', 'active_horse_count_display', 'created_at']
     search_fields = ['name', 'email', 'phone', 'account_code']
     list_filter = ['created_at']
     readonly_fields = ['created_at', 'updated_at']
 
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.annotate(
+            _active_horse_count=Count(
+                'placements__horse',
+                filter=Q(placements__end_date__isnull=True),
+                distinct=True,
+            )
+        )
+
+    def active_horse_count_display(self, obj):
+        return obj._active_horse_count
+    active_horse_count_display.short_description = 'Active Horses'
+
 
 @admin.register(Location)
 class LocationAdmin(admin.ModelAdmin):
-    list_display = ['name', 'site', 'capacity', 'current_horse_count', 'availability']
+    list_display = ['name', 'site', 'capacity', 'current_horse_count_display', 'availability_display']
     list_filter = ['site']
     search_fields = ['name', 'site']
     readonly_fields = ['created_at', 'updated_at']
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.annotate(
+            _current_horse_count=Count(
+                'placements__horse',
+                filter=Q(placements__end_date__isnull=True),
+                distinct=True,
+            )
+        )
+
+    def current_horse_count_display(self, obj):
+        return obj._current_horse_count
+    current_horse_count_display.short_description = 'Current Horses'
+
+    def availability_display(self, obj):
+        if obj.capacity:
+            return obj.capacity - obj._current_horse_count
+        return None
+    availability_display.short_description = 'Available'
 
 
 class PlacementInline(admin.TabularInline):
@@ -57,7 +93,19 @@ class HorseAdmin(admin.ModelAdmin):
     search_fields = ['name', 'passport_number', 'notes', 'sire_name']
     readonly_fields = ['created_at', 'updated_at']
     raw_id_fields = ['dam']
-    inlines = [HorseOwnershipInline]
+    inlines = [HorseOwnershipInline, OwnershipShareInline]
+
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.prefetch_related(
+            Prefetch(
+                'placements',
+                queryset=Placement.objects.filter(
+                    end_date__isnull=True
+                ).select_related('owner', 'location'),
+                to_attr='_active_placements',
+            )
+        )
 
     def current_owner_display(self, obj):
         owners = obj.current_owners
@@ -70,8 +118,8 @@ class HorseAdmin(admin.ModelAdmin):
     current_owner_display.short_description = 'Owner(s)'
 
     def current_location_display(self, obj):
-        location = obj.current_location
-        return location.name if location else '-'
+        placements = obj._active_placements
+        return placements[0].location.name if placements else '-'
     current_location_display.short_description = 'Location'
 
 
@@ -80,6 +128,21 @@ class RateTypeAdmin(admin.ModelAdmin):
     list_display = ['name', 'daily_rate', 'is_active']
     list_filter = ['is_active']
     search_fields = ['name']
+
+
+class OwnershipShareInline(admin.TabularInline):
+    model = OwnershipShare
+    extra = 1
+    readonly_fields = ['created_at', 'updated_at']
+
+
+@admin.register(OwnershipShare)
+class OwnershipShareAdmin(admin.ModelAdmin):
+    list_display = ['horse', 'owner', 'share_percentage', 'is_primary_contact', 'created_at']
+    list_filter = ['is_primary_contact']
+    search_fields = ['horse__name', 'owner__name']
+    raw_id_fields = ['horse', 'owner']
+    readonly_fields = ['created_at', 'updated_at']
 
 
 @admin.register(Placement)

@@ -4,7 +4,7 @@ Forms for core app.
 
 from django import forms
 
-from .models import Horse, Location, Owner, Placement, RateType
+from .models import Horse, Location, Owner, OwnershipShare, Placement, RateType
 
 
 class OwnerForm(forms.ModelForm):
@@ -114,6 +114,29 @@ class MoveHorseForm(forms.Form):
         required=False,
         widget=forms.Textarea(attrs={'class': 'form-textarea', 'rows': 2})
     )
+
+
+class OwnershipShareForm(forms.ModelForm):
+    class Meta:
+        model = OwnershipShare
+        fields = ['owner', 'share_percentage', 'is_primary_contact', 'notes']
+        widgets = {
+            'owner': forms.Select(attrs={'class': 'form-select'}),
+            'share_percentage': forms.NumberInput(attrs={
+                'class': 'form-input', 'step': '0.01', 'min': '0.01', 'max': '100',
+            }),
+            'is_primary_contact': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+            'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 1}),
+        }
+
+
+OwnershipShareFormSet = forms.inlineformset_factory(
+    Horse,
+    OwnershipShare,
+    form=OwnershipShareForm,
+    extra=1,
+    can_delete=True,
+)
 
 
 class RateTypeForm(forms.ModelForm):

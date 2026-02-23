@@ -460,6 +460,36 @@
         <!-- Right Column (Sidebar) -->
         <div class="space-y-6">
 
+            <!-- Ownership Shares -->
+            <div class="card">
+                <div class="section-header">
+                    <h3 class="section-title">Ownership</h3>
+                    <a href="{% url 'horse_ownership' horse.pk %}" class="btn-ghost btn-xs">Manage</a>
+                </div>
+                {% if ownership_shares %}
+                <ul class="divide-y divide-slate-100">
+                    {% for share in ownership_shares %}
+                    <li class="px-5 py-3 flex items-center justify-between">
+                        <div>
+                            <a href="{% url 'owner_detail' share.owner.pk %}" class="link text-sm">{{ share.owner.name }}</a>
+                            {% if share.is_primary_contact %}
+                            <span class="ml-1 text-xs text-amber-600 font-medium">Primary</span>
+                            {% endif %}
+                        </div>
+                        <span class="badge-info">{{ share.share_percentage|floatformat:0 }}%</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <div class="px-5 py-6 text-center">
+                    <p class="text-sm text-slate-400">No ownership shares set</p>
+                    <a href="{% url 'horse_ownership' horse.pk %}" class="btn-primary mt-3 inline-flex text-xs">
+                        Set Ownership
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
             <!-- Quick Actions -->
             <div class="card">
                 <div class="section-header">

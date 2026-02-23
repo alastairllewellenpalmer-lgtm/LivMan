@@ -97,6 +97,11 @@ class ExtraCharge(models.Model):
         blank=True,
         null=True
     )
+    split_by_ownership = models.BooleanField(
+        default=True,
+        help_text="Split this charge among owners by their ownership %. "
+                  "If unchecked, bill 100% to the specified owner."
+    )
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

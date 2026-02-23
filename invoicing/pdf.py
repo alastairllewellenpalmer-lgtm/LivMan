@@ -178,9 +178,12 @@ def generate_invoice_pdf_reportlab(invoice):
     row_styles = []
 
     for group in horse_groups:
+        # Determine ownership % from first line item's share_percentage
+        share_pct = group['items'][0].share_percentage if group['items'] else Decimal('100')
+        share_label = f" ({share_pct:g}% share)" if share_pct < 100 else ""
         # Horse header row
         table_data.append([
-            Paragraph(f"<b>{group['horse_name']}</b>", item_style),
+            Paragraph(f"<b>{group['horse_name']}{share_label}</b>", item_style),
             '',
         ])
         row_idx = len(table_data) - 1
