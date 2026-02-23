@@ -5,7 +5,7 @@ Core models for horse management system.
 from datetime import date, timedelta
 from decimal import Decimal
 
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils import timezone
 
@@ -43,6 +43,18 @@ class Owner(models.Model):
     @property
     def active_horse_count(self):
         return self.active_horses.count()
+
+    @property
+    def active_horses_via_shares(self):
+        """Get horses this owner has ownership shares in (active horses only)."""
+        return Horse.objects.filter(
+            ownership_shares__owner=self,
+            is_active=True
+        ).distinct()
+
+    @property
+    def owned_horse_count(self):
+        return self.active_horses_via_shares.count()
 
 
 class Location(models.Model):
@@ -165,9 +177,56 @@ class Horse(models.Model):
 
     @property
     def current_owner(self):
-        """Get the current owner."""
+        """Get the current owner -- prefer OwnershipShare, fall back to Placement."""
+        primary = self.primary_owner
+        if primary:
+            return primary
         placement = self.current_placement
         return placement.owner if placement else None
+
+    @property
+    def current_owners(self):
+        """Get all current fractional owners with their share percentages.
+
+        Returns a list of (owner, share_percentage) tuples.
+        Falls back to placement owner at 100% if no ownership records exist.
+        """
+        from core.models import HorseOwnership
+        shares = HorseOwnership.get_ownership_shares(self)
+        if shares:
+            return shares
+        # Fallback to placement owner
+        if self.current_owner:
+            return [(self.current_owner, Decimal('100.00'))]
+        return []
+
+    @property
+    def has_fractional_ownership(self):
+        """Check if this horse has multiple owners or explicit ownership records."""
+        return self.ownerships.filter(
+            effective_from__lte=date.today()
+        ).filter(
+            models.Q(effective_to__isnull=True) | models.Q(effective_to__gte=date.today())
+        ).exists()
+
+    @property
+    def primary_owner(self):
+        """Get the primary contact owner, falling back to largest shareholder."""
+        share = self.ownership_shares.filter(is_primary_contact=True).first()
+        if not share:
+            share = self.ownership_shares.order_by('-share_percentage').first()
+        return share.owner if share else None
+
+    @property
+    def owners(self):
+        """Get all current owners via OwnershipShare."""
+        return Owner.objects.filter(
+            ownership_shares__horse=self
+        ).distinct()
+
+    @property
+    def has_multiple_owners(self):
+        return self.ownership_shares.count() > 1
 
 
 class RateType(models.Model):
@@ -294,6 +353,178 @@ class Placement(models.Model):
         """Calculate the charge for this placement in a billing period."""
         days = self.get_days_in_period(period_start, period_end)
         return days * self.daily_rate
+
+
+class HorseOwnership(models.Model):
+    """Tracks fractional ownership of a horse by multiple owners.
+
+    This allows horses to be owned by multiple owners with different
+    percentage shares. Invoice charges are split according to these
+    ownership percentages.
+    """
+
+    horse = models.ForeignKey(
+        Horse,
+        on_delete=models.CASCADE,
+        related_name='ownerships'
+    )
+    owner = models.ForeignKey(
+        Owner,
+        on_delete=models.PROTECT,
+        related_name='horse_ownerships'
+    )
+    share_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        validators=[
+            MinValueValidator(Decimal('0.01')),
+            MaxValueValidator(Decimal('100.00'))
+        ],
+        help_text="Ownership percentage (0.01 to 100.00)"
+    )
+    effective_from = models.DateField()
+    effective_to = models.DateField(
+        null=True,
+        blank=True,
+        help_text="Leave blank if ownership is ongoing"
+    )
+    is_billing_contact = models.BooleanField(
+        default=False,
+        help_text="Primary contact for billing communications about this horse"
+    )
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-effective_from', 'owner__name']
+        verbose_name = "Horse Ownership"
+        verbose_name_plural = "Horse Ownerships"
+
+    def __str__(self):
+        return f"{self.horse.name} - {self.owner.name} ({self.share_percentage}%)"
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        super().clean()
+
+        if self.effective_to and self.effective_from and self.effective_to < self.effective_from:
+            raise ValidationError("Effective end date cannot be before start date.")
+
+    @property
+    def is_current(self):
+        """Check if this ownership is currently active."""
+        today = date.today()
+        if self.effective_from > today:
+            return False
+        if self.effective_to and self.effective_to < today:
+            return False
+        return True
+
+    @classmethod
+    def get_ownership_shares(cls, horse, as_of_date=None):
+        """Get all active ownership shares for a horse on a given date.
+
+        Returns a list of (owner, share_percentage) tuples.
+        If no ownership records exist, returns empty list.
+        """
+        if as_of_date is None:
+            as_of_date = date.today()
+
+        ownerships = cls.objects.filter(
+            horse=horse,
+            effective_from__lte=as_of_date,
+        ).filter(
+            models.Q(effective_to__isnull=True) | models.Q(effective_to__gte=as_of_date)
+        ).select_related('owner')
+
+        return [(o.owner, o.share_percentage) for o in ownerships]
+
+    @classmethod
+    def get_ownership_for_period(cls, horse, period_start, period_end):
+        """Get ownership shares that overlap with a billing period.
+
+        Returns a list of dicts with owner, percentage, and effective dates.
+        """
+        ownerships = cls.objects.filter(
+            horse=horse,
+            effective_from__lte=period_end,
+        ).filter(
+            models.Q(effective_to__isnull=True) | models.Q(effective_to__gte=period_start)
+        ).select_related('owner')
+
+        result = []
+        for ownership in ownerships:
+            eff_start = max(ownership.effective_from, period_start)
+            eff_end = min(ownership.effective_to or period_end, period_end)
+            result.append({
+                'owner': ownership.owner,
+                'percentage': ownership.share_percentage,
+                'effective_start': eff_start,
+                'effective_end': eff_end,
+            })
+        return result
+
+
+class OwnershipShare(models.Model):
+    """Fractional ownership of a horse. Shares for a horse must total <= 100%."""
+
+    horse = models.ForeignKey(
+        Horse,
+        on_delete=models.CASCADE,
+        related_name='ownership_shares'
+    )
+    owner = models.ForeignKey(
+        Owner,
+        on_delete=models.PROTECT,
+        related_name='ownership_shares'
+    )
+    share_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        validators=[
+            MinValueValidator(Decimal('0.01')),
+            MaxValueValidator(Decimal('100.00')),
+        ],
+        help_text="Ownership percentage (e.g. 50.00 for 50%)"
+    )
+    is_primary_contact = models.BooleanField(
+        default=False,
+        help_text="Primary contact for this horse"
+    )
+    notes = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-share_percentage']
+        unique_together = [('horse', 'owner')]
+        indexes = [
+            models.Index(fields=['horse', 'owner'], name='ownership_horse_owner'),
+        ]
+
+    def __str__(self):
+        return f"{self.owner.name} owns {self.share_percentage}% of {self.horse.name}"
+
+    @property
+    def share_fraction(self):
+        """Return share as a decimal fraction (e.g. 0.50 for 50%)."""
+        return self.share_percentage / Decimal('100')
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        super().clean()
+        if not self.horse_id:
+            return
+        existing = OwnershipShare.objects.filter(horse=self.horse)
+        if self.pk:
+            existing = existing.exclude(pk=self.pk)
+        total = sum(s.share_percentage for s in existing) + (self.share_percentage or Decimal('0'))
+        if total > Decimal('100.00'):
+            raise ValidationError(
+                f"Total ownership for {self.horse.name} would be {total}%, "
+                f"which exceeds 100%."
+            )
 
 
 class BusinessSettings(models.Model):
@@ -485,6 +716,12 @@ class InvoiceLineItem(models.Model):
         max_digits=10,
         decimal_places=2
     )
+    share_percentage = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal('100.00'),
+        help_text="Ownership share % at time of invoicing"
+    )
 
     class Meta:
         ordering = ['line_type', 'description']
@@ -493,6 +730,7 @@ class InvoiceLineItem(models.Model):
         return f"{self.description}: £{self.line_total}"
 
     def save(self, *args, **kwargs):
-        # Auto-calculate line total
-        self.line_total = self.quantity * self.unit_price
+        # Auto-calculate line total unless explicitly provided
+        if self.line_total is None:
+            self.line_total = self.quantity * self.unit_price
         super().save(*args, **kwargs)

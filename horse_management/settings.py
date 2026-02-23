@@ -72,7 +72,6 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'core.middleware.ServerTimingMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -112,9 +111,6 @@ if DATABASE_URL:
     DATABASES = {
         'default': env.db()
     }
-    DATABASES['default']['CONN_MAX_AGE'] = 0          # Close after each request (required for transaction pooling)
-    DATABASES['default']['CONN_HEALTH_CHECKS'] = True
-    DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True  # Required for Supabase pooler
 else:
     DATABASES = {
         'default': {
@@ -195,23 +191,6 @@ LOGIN_URL = '/accounts/login/'
 SESSION_COOKIE_AGE = 28800  # 8 hours
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_HTTPONLY = True
-
-# Logging — surface slow-request warnings in Vercel function logs
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-        },
-    },
-    'loggers': {
-        'performance': {
-            'handlers': ['console'],
-            'level': 'WARNING',
-        },
-    },
-}
 
 # Security settings for production (applied when DEBUG=False)
 if not DEBUG:

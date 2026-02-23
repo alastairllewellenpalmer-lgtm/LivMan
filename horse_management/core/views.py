@@ -34,8 +34,11 @@ from health.models import (
     WormingTreatment,
 )
 
-from .forms import HorseForm, LocationForm, MoveHorseForm, OwnerForm, PlacementForm
-from .models import Horse, Invoice, Location, Owner, Placement, RateType
+from .forms import (
+    HorseForm, LocationForm, MoveHorseForm, OwnerForm,
+    OwnershipShareFormSet, PlacementForm,
+)
+from .models import Horse, Invoice, Location, Owner, OwnershipShare, Placement, RateType
 
 
 def health_check(request):
@@ -66,11 +69,12 @@ def dashboard(request):
         )
     ).filter(horse_count__gt=0).order_by('-horse_count')
 
-    # Owner summary
+    # Owner summary (via ownership shares)
     owners_with_horses = Owner.objects.annotate(
         horse_count=Count(
-            'placements',
-            filter=Q(placements__end_date__isnull=True)
+            'ownership_shares',
+            filter=Q(ownership_shares__horse__is_active=True),
+            distinct=True,
         )
     ).filter(horse_count__gt=0).order_by('-horse_count')[:10]
 
@@ -218,6 +222,7 @@ class HorseDetailView(LoginRequiredMixin, DetailView):
         context['extra_charges'] = horse.extra_charges.select_related(
             'owner'
         ).all()[:10]
+        context['ownership_shares'] = horse.ownership_shares.select_related('owner').all()
         # New sections
         context['worming_treatments'] = horse.worming_treatments.all()[:10]
         context['egg_counts'] = horse.worm_egg_counts.all()[:10]
@@ -278,6 +283,8 @@ def horse_move(request, pk):
             new_owner = form.cleaned_data['new_owner']
             new_rate_type = form.cleaned_data['new_rate_type']
 
+            if not new_owner:
+                new_owner = horse.primary_owner
             if not new_owner and current_placement:
                 new_owner = current_placement.owner
             if not new_rate_type and current_placement:
@@ -329,8 +336,9 @@ class OwnerListView(LoginRequiredMixin, ListView):
     def get_queryset(self):
         return Owner.objects.annotate(
             horse_count=Count(
-                'placements',
-                filter=Q(placements__end_date__isnull=True)
+                'ownership_shares',
+                filter=Q(ownership_shares__horse__is_active=True),
+                distinct=True,
             )
         ).order_by('name')
 
@@ -350,10 +358,20 @@ class OwnerDetailView(LoginRequiredMixin, DetailView):
             ).select_related('location'),
             to_attr='active_placements',
         )
-        context['horses'] = Horse.objects.filter(
-            placements__owner=self.object,
-            placements__end_date__isnull=True
+        # Get horses via ownership shares, annotate with share %
+        shares = OwnershipShare.objects.filter(owner=self.object).select_related('horse')
+        share_map = {s.horse_id: s.share_percentage for s in shares}
+
+        horses = Horse.objects.filter(
+            ownership_shares__owner=self.object,
+            is_active=True,
         ).distinct().prefetch_related(active_placements)
+
+        # Attach share_pct to each horse for template use
+        for horse in horses:
+            horse.share_pct = share_map.get(horse.pk)
+
+        context['horses'] = horses
         context['invoices'] = self.object.invoices.all()[:10]
         context['extra_charges'] = self.object.extra_charges.filter(
             invoiced=False
@@ -482,3 +500,35 @@ class PlacementUpdateView(LoginRequiredMixin, UpdateView):
     form_class = PlacementForm
     template_name = 'placements/placement_form.html'
     success_url = reverse_lazy('placement_list')
+
+
+@login_required
+def manage_ownership_shares(request, pk):
+    """Manage fractional ownership shares for a horse."""
+    horse = get_object_or_404(Horse, pk=pk)
+
+    if request.method == 'POST':
+        formset = OwnershipShareFormSet(request.POST, instance=horse)
+        if formset.is_valid():
+            formset.save()
+            total = sum(
+                f.cleaned_data.get('share_percentage', 0) or 0
+                for f in formset
+                if f.cleaned_data and not f.cleaned_data.get('DELETE', False)
+            )
+            if total < 100:
+                messages.warning(
+                    request,
+                    f"Total ownership is {total}% (less than 100%). "
+                    "This horse has unallocated ownership."
+                )
+            else:
+                messages.success(request, f"Ownership shares for {horse.name} updated.")
+            return redirect('horse_detail', pk=horse.pk)
+    else:
+        formset = OwnershipShareFormSet(instance=horse)
+
+    return render(request, 'horses/horse_ownership.html', {
+        'horse': horse,
+        'formset': formset,
+    })

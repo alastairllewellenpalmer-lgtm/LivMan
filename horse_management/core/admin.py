@@ -9,10 +9,12 @@ from django.utils.html import format_html
 from .models import (
     BusinessSettings,
     Horse,
+    HorseOwnership,
     Invoice,
     InvoiceLineItem,
     Location,
     Owner,
+    OwnershipShare,
     Placement,
     RateType,
 )
@@ -68,6 +70,19 @@ class LocationAdmin(admin.ModelAdmin):
     availability_display.short_description = 'Available'
 
 
+class PlacementInline(admin.TabularInline):
+    model = Placement
+    extra = 0
+    readonly_fields = ['created_at']
+
+
+class HorseOwnershipInline(admin.TabularInline):
+    model = HorseOwnership
+    extra = 0
+    readonly_fields = ['created_at']
+    fields = ['owner', 'share_percentage', 'effective_from', 'effective_to', 'is_billing_contact', 'notes']
+
+
 @admin.register(Horse)
 class HorseAdmin(admin.ModelAdmin):
     list_display = [
@@ -78,6 +93,7 @@ class HorseAdmin(admin.ModelAdmin):
     search_fields = ['name', 'passport_number', 'notes', 'sire_name']
     readonly_fields = ['created_at', 'updated_at']
     raw_id_fields = ['dam']
+    inlines = [HorseOwnershipInline, OwnershipShareInline]
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
@@ -92,9 +108,14 @@ class HorseAdmin(admin.ModelAdmin):
         )
 
     def current_owner_display(self, obj):
-        placements = obj._active_placements
-        return placements[0].owner.name if placements else '-'
-    current_owner_display.short_description = 'Owner'
+        owners = obj.current_owners
+        if not owners:
+            return '-'
+        if len(owners) == 1:
+            return owners[0][0].name
+        # Multiple owners - show names with percentages
+        return ', '.join([f"{o.name} ({pct}%)" for o, pct in owners])
+    current_owner_display.short_description = 'Owner(s)'
 
     def current_location_display(self, obj):
         placements = obj._active_placements
@@ -109,10 +130,19 @@ class RateTypeAdmin(admin.ModelAdmin):
     search_fields = ['name']
 
 
-class PlacementInline(admin.TabularInline):
-    model = Placement
-    extra = 0
-    readonly_fields = ['created_at']
+class OwnershipShareInline(admin.TabularInline):
+    model = OwnershipShare
+    extra = 1
+    readonly_fields = ['created_at', 'updated_at']
+
+
+@admin.register(OwnershipShare)
+class OwnershipShareAdmin(admin.ModelAdmin):
+    list_display = ['horse', 'owner', 'share_percentage', 'is_primary_contact', 'created_at']
+    list_filter = ['is_primary_contact']
+    search_fields = ['horse__name', 'owner__name']
+    raw_id_fields = ['horse', 'owner']
+    readonly_fields = ['created_at', 'updated_at']
 
 
 @admin.register(Placement)
@@ -175,3 +205,21 @@ class InvoiceLineItemAdmin(admin.ModelAdmin):
     list_filter = ['line_type']
     search_fields = ['description', 'horse__name', 'invoice__invoice_number']
     raw_id_fields = ['invoice', 'horse', 'placement', 'charge']
+
+
+@admin.register(HorseOwnership)
+class HorseOwnershipAdmin(admin.ModelAdmin):
+    list_display = [
+        'horse', 'owner', 'share_percentage', 'effective_from',
+        'effective_to', 'is_current', 'is_billing_contact'
+    ]
+    list_filter = ['is_billing_contact', 'effective_from', 'owner']
+    search_fields = ['horse__name', 'owner__name']
+    date_hierarchy = 'effective_from'
+    raw_id_fields = ['horse', 'owner']
+    readonly_fields = ['created_at', 'updated_at']
+
+    def is_current(self, obj):
+        return obj.is_current
+    is_current.boolean = True
+    is_current.short_description = 'Current'
