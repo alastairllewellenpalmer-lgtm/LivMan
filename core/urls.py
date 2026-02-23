@@ -7,6 +7,9 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Health check (no auth required)
+    path('_health/', views.health_check, name='health_check'),
+
     # Dashboard
     path('', views.dashboard, name='dashboard'),
 

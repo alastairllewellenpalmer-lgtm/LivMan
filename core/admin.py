@@ -83,6 +83,12 @@ class HorseOwnershipInline(admin.TabularInline):
     fields = ['owner', 'share_percentage', 'effective_from', 'effective_to', 'is_billing_contact', 'notes']
 
 
+class OwnershipShareInline(admin.TabularInline):
+    model = OwnershipShare
+    extra = 1
+    readonly_fields = ['created_at', 'updated_at']
+
+
 @admin.register(Horse)
 class HorseAdmin(admin.ModelAdmin):
     list_display = [
@@ -128,12 +134,6 @@ class RateTypeAdmin(admin.ModelAdmin):
     list_display = ['name', 'daily_rate', 'is_active']
     list_filter = ['is_active']
     search_fields = ['name']
-
-
-class OwnershipShareInline(admin.TabularInline):
-    model = OwnershipShare
-    extra = 1
-    readonly_fields = ['created_at', 'updated_at']
 
 
 @admin.register(OwnershipShare)

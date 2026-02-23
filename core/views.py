@@ -53,18 +53,6 @@ def health_check(request):
     })
 
 
-def health_check(request):
-    """Lightweight DB ping. No auth required. Used by Vercel cron to keep Supabase awake."""
-    start = time.monotonic()
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT 1")
-    db_ms = (time.monotonic() - start) * 1000
-    return JsonResponse({
-        "status": "ok",
-        "db_ping_ms": round(db_ms, 1),
-    })
-
-
 @login_required
 def dashboard(request):
     """Main dashboard view."""
