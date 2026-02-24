@@ -2,6 +2,7 @@
 Views for core app.
 """
 
+import io
 import time
 import traceback
 from datetime import timedelta
@@ -85,14 +86,26 @@ def _dashboard_inner(request):
         )
     ).filter(horse_count__gt=0).order_by('-horse_count')
 
-    # Owner summary (via ownership shares)
-    owners_with_horses = Owner.objects.annotate(
-        horse_count=Count(
-            'ownership_shares',
-            filter=Q(ownership_shares__horse__is_active=True),
-            distinct=True,
-        )
-    ).filter(horse_count__gt=0).order_by('-horse_count')[:10]
+    # Owner summary — fall back to placement-based count if OwnershipShare
+    # table hasn't been created yet (migration 0006).
+    try:
+        owners_with_horses = Owner.objects.annotate(
+            horse_count=Count(
+                'ownership_shares',
+                filter=Q(ownership_shares__horse__is_active=True),
+                distinct=True,
+            )
+        ).filter(horse_count__gt=0).order_by('-horse_count')[:10]
+        # Force evaluation to trigger any DB error now
+        list(owners_with_horses)
+    except Exception:
+        owners_with_horses = Owner.objects.annotate(
+            horse_count=Count(
+                'placements',
+                filter=Q(placements__end_date__isnull=True),
+                distinct=True,
+            )
+        ).filter(horse_count__gt=0).order_by('-horse_count')[:10]
 
     # Vaccinations due soon
     vaccinations_due = Vaccination.objects.filter(
@@ -556,4 +569,40 @@ def manage_ownership_shares(request, pk):
     return render(request, 'horses/horse_ownership.html', {
         'horse': horse,
         'formset': formset,
+    })
+
+
+def migration_status(request):
+    """Diagnostic endpoint: report applied vs pending migrations (no auth)."""
+    from django.core.management import call_command
+
+    buf = io.StringIO()
+    call_command('showmigrations', '--plan', stdout=buf)
+    plan_output = buf.getvalue()
+
+    applied = []
+    pending = []
+    for line in plan_output.strip().splitlines():
+        line = line.strip()
+        if line.startswith('[X]'):
+            applied.append(line[4:].strip())
+        elif line.startswith('[ ]'):
+            pending.append(line[4:].strip())
+
+    # Highlight the critical core migrations 0005-0008
+    critical = ['core.0005', 'core.0006', 'core.0007', 'core.0008']
+    critical_status = {}
+    for name in critical:
+        if any(name in a for a in applied):
+            critical_status[name] = 'applied'
+        elif any(name in p for p in pending):
+            critical_status[name] = 'PENDING'
+        else:
+            critical_status[name] = 'not found'
+
+    return JsonResponse({
+        'applied_count': len(applied),
+        'pending_count': len(pending),
+        'pending': pending,
+        'critical_migrations': critical_status,
     })
