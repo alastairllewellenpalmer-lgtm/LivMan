@@ -9,12 +9,19 @@ import traceback
 import importlib
 from pathlib import Path
 
-# Ensure the horse_management/ directory is on sys.path so that
-# `core`, `billing`, `health`, etc. resolve to the correct inner
+# Ensure the horse_management/ directory is at the FRONT of sys.path so
+# bare imports (core, billing, health, etc.) resolve to the correct inner
 # packages rather than any stale repo-root duplicates.
-_project_dir = str(Path(__file__).resolve().parent)
+_this_dir = Path(__file__).resolve().parent
+_project_dir = str(_this_dir)
+
+# Insert at position 0 to take priority over /var/task
 if _project_dir not in sys.path:
     sys.path.insert(0, _project_dir)
+
+# Also record what we did for diagnostics
+_path_fix_applied = _project_dir
+_path_at_boot = list(sys.path[:10])
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'horse_management.settings')
 
@@ -45,16 +52,26 @@ def application(environ, start_response):
             base_dir = '?'
             root_urlconf = '?'
 
+        # Where does 'core' actually resolve to?
+        try:
+            import core
+            core_path = getattr(core, '__file__', '?')
+        except Exception as exc:
+            core_path = f'import error: {exc}'
+
         body = json.dumps({
             'django_booted': _django_app is not None,
             'boot_error': _boot_error,
-            'sys_path': sys.path[:10],
+            'path_fix_applied': _path_fix_applied,
+            'sys_path_at_boot': _path_at_boot,
+            'sys_path_now': sys.path[:10],
             'cwd': os.getcwd(),
             'settings_module': settings_module,
             'settings_file': settings_file,
             'BASE_DIR': base_dir,
             'ROOT_URLCONF': root_urlconf,
             'wsgi_file': __file__,
+            'core_resolves_to': core_path,
         }, indent=2).encode()
 
         start_response('200 OK', [
