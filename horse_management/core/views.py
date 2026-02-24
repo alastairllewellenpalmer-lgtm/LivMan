@@ -608,6 +608,10 @@ def migration_status(request):
     })
 
 
+from django.views.decorators.csrf import csrf_exempt
+
+
+@csrf_exempt
 def run_migrations(request):
     """Temporary endpoint to apply pending migrations. Remove after use."""
     from django.core.management import call_command
