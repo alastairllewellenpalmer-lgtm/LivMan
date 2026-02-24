@@ -7,6 +7,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.db import models
+from django.utils import timezone
 
 
 class VaccinationType(models.Model):
@@ -23,7 +24,7 @@ class VaccinationType(models.Model):
     )
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
