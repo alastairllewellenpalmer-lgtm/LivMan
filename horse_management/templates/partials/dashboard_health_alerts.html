@@ -1,0 +1,75 @@
+{% if ehv_due or high_egg_counts or vet_follow_ups %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- EHV Due -->
+    {% if ehv_due %}
+    <div class="card border-l-4 border-blue-400">
+        <div class="section-header">
+            <h2 class="section-title">EHV Vaccinations Due</h2>
+        </div>
+        <ul class="divide-y divide-slate-100">
+            {% for br in ehv_due %}
+            <li class="px-5 py-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <a href="{% url 'horse_detail' br.mare.pk %}" class="link text-sm">{{ br.mare.name }}</a>
+                        <p class="text-xs text-slate-400">x {{ br.stallion_name }}</p>
+                    </div>
+                    <span class="text-sm text-blue-600">
+                        Due: {{ br.date_foal_due|default:"TBC" }}
+                    </span>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- High Egg Counts -->
+    {% if high_egg_counts %}
+    <div class="card border-l-4 border-red-400">
+        <div class="section-header">
+            <h2 class="section-title">High Egg Counts (&gt;200 EPG)</h2>
+        </div>
+        <ul class="divide-y divide-slate-100">
+            {% for ec in high_egg_counts %}
+            <li class="px-5 py-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <a href="{% url 'horse_detail' ec.horse.pk %}" class="link text-sm">{{ ec.horse.name }}</a>
+                        <p class="text-xs text-slate-400">{{ ec.date }}</p>
+                    </div>
+                    <span class="badge-danger">{{ ec.count }} EPG</span>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <!-- Vet Follow-ups -->
+    {% if vet_follow_ups %}
+    <div class="card border-l-4 border-amber-400">
+        <div class="section-header">
+            <h2 class="section-title">Vet Follow-ups</h2>
+        </div>
+        <ul class="divide-y divide-slate-100">
+            {% for v in vet_follow_ups %}
+            <li class="px-5 py-3">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <a href="{% url 'horse_detail' v.horse.pk %}" class="link text-sm">{{ v.horse.name }}</a>
+                        <p class="text-xs text-slate-400">{{ v.reason|truncatewords:6 }}</p>
+                    </div>
+                    <span class="text-sm text-amber-600">
+                        {{ v.follow_up_date }}
+                    </span>
+                </div>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+</div>
+{% endif %}

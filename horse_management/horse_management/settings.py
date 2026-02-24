@@ -60,8 +60,6 @@ INSTALLED_APPS = [
     'django_htmx',
     'crispy_forms',
     'crispy_tailwind',
-    'django_celery_beat',
-    'django_celery_results',
 
     # Local apps
     'core.apps.CoreConfig',
@@ -70,6 +68,13 @@ INSTALLED_APPS = [
     'billing.apps.BillingConfig',
     'notifications.apps.NotificationsConfig',
 ]
+
+# Only add celery apps when not on Vercel (no worker process there)
+if not os.environ.get('VERCEL'):
+    INSTALLED_APPS += [
+        'django_celery_beat',
+        'django_celery_results',
+    ]
 
 MIDDLEWARE = [
     'core.middleware.ServerTimingMiddleware',

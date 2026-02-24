@@ -3,6 +3,7 @@ Views for core app.
 """
 
 import time
+import traceback
 from datetime import timedelta
 
 from django.contrib import messages
@@ -55,7 +56,22 @@ def health_check(request):
 
 @login_required
 def dashboard(request):
-    """Main dashboard view."""
+    """Main dashboard view with diagnostic error capture."""
+    _t0 = time.monotonic()
+    try:
+        return _dashboard_inner(request)
+    except Exception as exc:
+        elapsed = (time.monotonic() - _t0) * 1000
+        return JsonResponse({
+            "error": str(exc),
+            "type": type(exc).__name__,
+            "elapsed_ms": round(elapsed, 1),
+            "traceback": traceback.format_exc(),
+        }, status=500)
+
+
+def _dashboard_inner(request):
+    """Dashboard queries (health alerts loaded via HTMX)."""
     today = timezone.now().date()
     thirty_days = today + timedelta(days=30)
     two_weeks = today + timedelta(days=14)
@@ -106,25 +122,6 @@ def dashboard(request):
         total=Sum('amount')
     )['total'] or 0
 
-    # Mares with EHV vaccinations due soon
-    ehv_due = BreedingRecord.objects.filter(
-        status='confirmed',
-        mare__is_active=True,
-    ).select_related('mare')[:10]
-
-    # Recent high worm egg counts (>200 EPG)
-    high_egg_counts = WormEggCount.objects.filter(
-        count__gt=200,
-        horse__is_active=True,
-    ).select_related('horse').order_by('-date')[:10]
-
-    # Upcoming vet follow-ups
-    vet_follow_ups = VetVisit.objects.filter(
-        follow_up_date__gte=today,
-        follow_up_date__lte=thirty_days,
-        horse__is_active=True,
-    ).select_related('horse', 'vet').order_by('follow_up_date')[:10]
-
     context = {
         'total_horses': total_horses,
         'horses_by_location': horses_by_location,
@@ -134,12 +131,40 @@ def dashboard(request):
         'outstanding_invoices': outstanding_invoices,
         'unbilled_charges': unbilled_charges,
         'unbilled_total': unbilled_total,
+    }
+
+    return render(request, 'dashboard.html', context)
+
+
+@login_required
+def dashboard_health_alerts(request):
+    """HTMX partial: health alerts loaded after initial dashboard render."""
+    today = timezone.now().date()
+    thirty_days = today + timedelta(days=30)
+
+    ehv_due = BreedingRecord.objects.filter(
+        status='confirmed',
+        mare__is_active=True,
+    ).select_related('mare')[:10]
+
+    high_egg_counts = WormEggCount.objects.filter(
+        count__gt=200,
+        horse__is_active=True,
+    ).select_related('horse').order_by('-date')[:10]
+
+    vet_follow_ups = VetVisit.objects.filter(
+        follow_up_date__gte=today,
+        follow_up_date__lte=thirty_days,
+        horse__is_active=True,
+    ).select_related('horse', 'vet').order_by('follow_up_date')[:10]
+
+    context = {
         'ehv_due': ehv_due,
         'high_egg_counts': high_egg_counts,
         'vet_follow_ups': vet_follow_ups,
     }
 
-    return render(request, 'dashboard.html', context)
+    return render(request, 'partials/dashboard_health_alerts.html', context)
 
 
 # Horse Views
