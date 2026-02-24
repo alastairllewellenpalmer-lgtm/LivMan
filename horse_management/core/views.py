@@ -606,3 +606,29 @@ def migration_status(request):
         'pending': pending,
         'critical_migrations': critical_status,
     })
+
+
+def run_migrations(request):
+    """Temporary endpoint to apply pending migrations. Remove after use."""
+    from django.core.management import call_command
+
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST required'}, status=405)
+
+    out = io.StringIO()
+    err = io.StringIO()
+    try:
+        call_command('migrate', '--noinput', stdout=out, stderr=err)
+        return JsonResponse({
+            'status': 'ok',
+            'stdout': out.getvalue(),
+            'stderr': err.getvalue(),
+        })
+    except Exception as exc:
+        return JsonResponse({
+            'status': 'error',
+            'error': str(exc),
+            'stdout': out.getvalue(),
+            'stderr': err.getvalue(),
+            'traceback': traceback.format_exc(),
+        }, status=500)
