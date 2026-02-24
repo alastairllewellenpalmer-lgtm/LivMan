@@ -3,6 +3,7 @@ PDF generation for invoices.
 """
 
 import io
+import logging
 from decimal import Decimal
 
 from django.template.loader import render_to_string
@@ -11,13 +12,15 @@ from core.models import BusinessSettings
 
 from .utils import group_line_items_by_horse
 
+logger = logging.getLogger(__name__)
+
 
 def generate_invoice_pdf(invoice):
     """Generate a PDF for an invoice using WeasyPrint."""
     try:
         from weasyprint import HTML
-    except (ImportError, OSError):
-        # Fallback if WeasyPrint not installed or missing system libraries (GTK/Pango on Windows)
+    except (ImportError, OSError) as e:
+        logger.info("WeasyPrint unavailable (%s), using ReportLab fallback.", e)
         return generate_invoice_pdf_reportlab(invoice)
 
     settings = BusinessSettings.get_settings()

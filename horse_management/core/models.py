@@ -712,15 +712,19 @@ class InvoiceLineItem(models.Model):
     quantity = models.DecimalField(
         max_digits=10,
         decimal_places=2,
-        default=Decimal('1.00')
+        default=Decimal('1.00'),
+        validators=[MinValueValidator(Decimal('0.00'))],
     )
     unit_price = models.DecimalField(
         max_digits=10,
-        decimal_places=2
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal('0.00'))],
     )
     line_total = models.DecimalField(
         max_digits=10,
-        decimal_places=2
+        decimal_places=2,
+        null=True,
+        blank=True,
     )
     share_percentage = models.DecimalField(
         max_digits=5,
@@ -738,5 +742,5 @@ class InvoiceLineItem(models.Model):
     def save(self, *args, **kwargs):
         # Auto-calculate line total unless explicitly provided
         if self.line_total is None:
-            self.line_total = self.quantity * self.unit_price
+            self.line_total = (self.quantity * self.unit_price).quantize(Decimal('0.01'))
         super().save(*args, **kwargs)

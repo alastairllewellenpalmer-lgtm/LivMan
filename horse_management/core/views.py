@@ -64,8 +64,9 @@ def dashboard(request):
         return _dashboard_inner(request)
     except Exception:
         logger.exception("Dashboard error")
-        return JsonResponse({
-            "error": "An unexpected error occurred. Please try again or contact support.",
+        return render(request, 'error.html', {
+            'error_title': 'Dashboard Error',
+            'error_message': 'An unexpected error occurred loading the dashboard. Please try again or contact support.',
         }, status=500)
 
 
@@ -208,9 +209,9 @@ class HorseListView(LoginRequiredMixin, ListView):
             ).select_related('owner', 'location'),
             to_attr='active_placements',
         )
-        queryset = Horse.objects.filter(is_active=True).only(
-            'id', 'name', 'age', 'date_of_birth', 'color', 'sex', 'is_active'
-        ).prefetch_related(active_placements)
+        queryset = Horse.objects.filter(is_active=True).prefetch_related(
+            active_placements
+        )
 
         # Search filter
         search = self.request.GET.get('search')

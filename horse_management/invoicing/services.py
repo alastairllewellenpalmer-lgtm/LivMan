@@ -14,7 +14,6 @@ from billing.models import ExtraCharge
 from core.models import (
     BusinessSettings,
     Horse,
-    HorseOwnership,
     Invoice,
     InvoiceLineItem,
     Owner,

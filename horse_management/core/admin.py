@@ -64,7 +64,7 @@ class LocationAdmin(admin.ModelAdmin):
     current_horse_count_display.short_description = 'Current Horses'
 
     def availability_display(self, obj):
-        if obj.capacity:
+        if obj.capacity is not None:
             return obj.capacity - obj._current_horse_count
         return None
     availability_display.short_description = 'Available'
@@ -99,7 +99,7 @@ class HorseAdmin(admin.ModelAdmin):
     search_fields = ['name', 'passport_number', 'notes', 'sire_name']
     readonly_fields = ['created_at', 'updated_at']
     raw_id_fields = ['dam']
-    inlines = [HorseOwnershipInline, OwnershipShareInline]
+    inlines = [OwnershipShareInline]
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)

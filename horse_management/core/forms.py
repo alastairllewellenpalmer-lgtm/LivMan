@@ -10,12 +10,13 @@ from .models import Horse, Location, Owner, OwnershipShare, Placement, RateType
 class OwnerForm(forms.ModelForm):
     class Meta:
         model = Owner
-        fields = ['name', 'email', 'phone', 'address', 'notes']
+        fields = ['name', 'email', 'phone', 'address', 'account_code', 'notes']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'form-input'}),
             'email': forms.EmailInput(attrs={'class': 'form-input'}),
             'phone': forms.TextInput(attrs={'class': 'form-input'}),
             'address': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3}),
+            'account_code': forms.TextInput(attrs={'class': 'form-input', 'placeholder': 'e.g. Xero account code'}),
             'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3}),
         }
 

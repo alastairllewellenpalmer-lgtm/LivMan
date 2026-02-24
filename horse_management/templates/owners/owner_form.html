@@ -53,6 +53,15 @@
                         <p class="mt-1 text-xs text-red-600">{{ form.address.errors.0 }}</p>
                         {% endif %}
                     </div>
+
+                    <div>
+                        <label for="id_account_code" class="block text-sm font-medium text-slate-700">Account Code</label>
+                        {{ form.account_code }}
+                        {% if form.account_code.errors %}
+                        <p class="mt-1 text-xs text-red-600">{{ form.account_code.errors.0 }}</p>
+                        {% endif %}
+                        <p class="mt-1 text-xs text-slate-400">For accounting systems (e.g. Xero)</p>
+                    </div>
                 </div>
             </fieldset>
 

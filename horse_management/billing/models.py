@@ -46,6 +46,7 @@ class ExtraCharge(models.Model):
     class ChargeType(models.TextChoices):
         VET = 'vet', 'Veterinary'
         FARRIER = 'farrier', 'Farrier'
+        VACCINATION = 'vaccination', 'Vaccination'
         FEED = 'feed', 'Feed/Hay'
         MEDICATION = 'medication', 'Medication'
         TRANSPORT = 'transport', 'Transport'

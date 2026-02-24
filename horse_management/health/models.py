@@ -23,6 +23,8 @@ class VaccinationType(models.Model):
     )
     description = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['name']
@@ -350,9 +352,9 @@ class BreedingRecord(models.Model):
         if not self.date_covered:
             return {}
         return {
-            5: self.date_covered + timedelta(days=5 * 30),
-            7: self.date_covered + timedelta(days=7 * 30),
-            9: self.date_covered + timedelta(days=9 * 30),
+            5: Vaccination._add_months(self.date_covered, 5),
+            7: Vaccination._add_months(self.date_covered, 7),
+            9: Vaccination._add_months(self.date_covered, 9),
         }
 
     @property
