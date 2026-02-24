@@ -2,9 +2,8 @@
 Views for core app.
 """
 
-import io
+import logging
 import time
-import traceback
 from datetime import timedelta
 
 from django.contrib import messages
@@ -55,19 +54,18 @@ def health_check(request):
     })
 
 
+logger = logging.getLogger(__name__)
+
+
 @login_required
 def dashboard(request):
-    """Main dashboard view with diagnostic error capture."""
-    _t0 = time.monotonic()
+    """Main dashboard view."""
     try:
         return _dashboard_inner(request)
-    except Exception as exc:
-        elapsed = (time.monotonic() - _t0) * 1000
+    except Exception:
+        logger.exception("Dashboard error")
         return JsonResponse({
-            "error": str(exc),
-            "type": type(exc).__name__,
-            "elapsed_ms": round(elapsed, 1),
-            "traceback": traceback.format_exc(),
+            "error": "An unexpected error occurred. Please try again or contact support.",
         }, status=500)
 
 
@@ -612,67 +610,3 @@ def manage_ownership_shares(request, pk):
     })
 
 
-def migration_status(request):
-    """Diagnostic endpoint: report applied vs pending migrations (no auth)."""
-    from django.core.management import call_command
-
-    buf = io.StringIO()
-    call_command('showmigrations', '--plan', stdout=buf)
-    plan_output = buf.getvalue()
-
-    applied = []
-    pending = []
-    for line in plan_output.strip().splitlines():
-        line = line.strip()
-        if line.startswith('[X]'):
-            applied.append(line[4:].strip())
-        elif line.startswith('[ ]'):
-            pending.append(line[4:].strip())
-
-    # Highlight the critical core migrations 0005-0008
-    critical = ['core.0005', 'core.0006', 'core.0007', 'core.0008']
-    critical_status = {}
-    for name in critical:
-        if any(name in a for a in applied):
-            critical_status[name] = 'applied'
-        elif any(name in p for p in pending):
-            critical_status[name] = 'PENDING'
-        else:
-            critical_status[name] = 'not found'
-
-    return JsonResponse({
-        'applied_count': len(applied),
-        'pending_count': len(pending),
-        'pending': pending,
-        'critical_migrations': critical_status,
-    })
-
-
-from django.views.decorators.csrf import csrf_exempt
-
-
-@csrf_exempt
-def run_migrations(request):
-    """Temporary endpoint to apply pending migrations. Remove after use."""
-    from django.core.management import call_command
-
-    if request.method != 'POST':
-        return JsonResponse({'error': 'POST required'}, status=405)
-
-    out = io.StringIO()
-    err = io.StringIO()
-    try:
-        call_command('migrate', '--noinput', stdout=out, stderr=err)
-        return JsonResponse({
-            'status': 'ok',
-            'stdout': out.getvalue(),
-            'stderr': err.getvalue(),
-        })
-    except Exception as exc:
-        return JsonResponse({
-            'status': 'error',
-            'error': str(exc),
-            'stdout': out.getvalue(),
-            'stderr': err.getvalue(),
-            'traceback': traceback.format_exc(),
-        }, status=500)
