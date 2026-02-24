@@ -8,9 +8,7 @@ from pathlib import Path
 import environ
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-# This file is at horse_management/settings.py so .parent gives us horse_management/
-# (the Django project root where manage.py, templates/, static/ live).
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Initialize environment variables
 env = environ.Env(
