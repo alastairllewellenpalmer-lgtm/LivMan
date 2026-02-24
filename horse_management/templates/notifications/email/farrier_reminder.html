@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            border-bottom: 2px solid #4f46e5;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+        .header h1 {
+            color: #4f46e5;
+            margin: 0;
+        }
+        .alert {
+            background-color: #fef3c7;
+            border: 1px solid #f59e0b;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .details {
+            background-color: #f5f5f5;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+            color: #666;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>{{ business.business_name }}</h1>
+    </div>
+
+    <p>Dear {{ owner.name }},</p>
+
+    <div class="alert">
+        <strong>Farrier Reminder</strong><br>
+        {{ horse.name }} is due for a farrier visit.
+    </div>
+
+    <div class="details">
+        <p><strong>Horse:</strong> {{ horse.name }}</p>
+        <p><strong>Due Date:</strong> {{ visit.next_due_date|date:"d/m/Y" }}</p>
+        <p><strong>Last Visit:</strong> {{ visit.date|date:"d/m/Y" }}</p>
+        <p><strong>Previous Work:</strong> {{ visit.get_work_done_display }}</p>
+    </div>
+
+    <p>Please arrange for the farrier to attend to {{ horse.name }} to maintain good hoof health.</p>
+
+    <p>If you have any questions or need assistance, please contact us.</p>
+
+    <p>Kind regards,<br>{{ business.business_name }}</p>
+
+    <div class="footer">
+        {% if business.phone %}Tel: {{ business.phone }}<br>{% endif %}
+        {% if business.email %}Email: {{ business.email }}{% endif %}
+    </div>
+</body>
+</html>

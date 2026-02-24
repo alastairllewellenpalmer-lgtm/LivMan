@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+
+{% block title %}{% if object %}Edit Vaccination Type{% else %}Add Vaccination Type{% endif %} - Cgate{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+
+    <!-- Page Header -->
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">{% if object %}Edit Vaccination Type{% else %}Add Vaccination Type{% endif %}</h1>
+            <p class="page-subtitle">{% if object %}Update vaccination type details below.{% else %}Create a new vaccination type.{% endif %}</p>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="card">
+        <form method="post">
+            {% csrf_token %}
+
+            <fieldset class="p-5 space-y-5">
+                <legend class="section-title">Vaccination Type Details</legend>
+
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <div class="sm:col-span-2">
+                        <label for="{{ form.name.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.name.label }}</label>
+                        {{ form.name }}
+                        <p class="text-xs text-slate-400 mt-1">e.g. Flu/Tetanus, Strangles, Rabies</p>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.interval_months.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.interval_months.label }}</label>
+                        {{ form.interval_months }}
+                        <p class="text-xs text-slate-400 mt-1">How often this vaccination is required</p>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.reminder_days_before.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.reminder_days_before.label }}</label>
+                        {{ form.reminder_days_before }}
+                        <p class="text-xs text-slate-400 mt-1">Days before due date to show reminder</p>
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label for="{{ form.description.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.description.label }}</label>
+                        {{ form.description }}
+                    </div>
+
+                    <div class="sm:col-span-2">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            {{ form.is_active }}
+                            <span class="text-sm font-medium text-slate-700">Active</span>
+                        </label>
+                        <p class="text-xs text-slate-400 mt-1">Inactive types won't appear when recording new vaccinations</p>
+                    </div>
+                </div>
+            </fieldset>
+
+            <footer class="border-t px-5 py-4 bg-slate-50 rounded-b-xl flex justify-end gap-3">
+                <a href="{% url 'vaccination_type_list' %}" class="btn-secondary">Cancel</a>
+                <button type="submit" class="btn-primary">
+                    {% if object %}Save Changes{% else %}Add Vaccination Type{% endif %}
+                </button>
+            </footer>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

@@ -332,7 +332,7 @@ def horse_move(request, pk):
             try:
                 new_placement.full_clean()
             except ValidationError as e:
-                messages.error(request, e.message)
+                messages.error(request, str(e))
                 return render(request, 'horses/horse_move.html', {
                     'horse': horse, 'form': form, 'current_placement': current_placement
                 })

@@ -1,0 +1,151 @@
+"""
+Forms for core app.
+"""
+
+from django import forms
+
+from .models import Horse, Location, Owner, OwnershipShare, Placement, RateType
+
+
+class OwnerForm(forms.ModelForm):
+    class Meta:
+        model = Owner
+        fields = ['name', 'email', 'phone', 'address', 'notes']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-input'}),
+            'email': forms.EmailInput(attrs={'class': 'form-input'}),
+            'phone': forms.TextInput(attrs={'class': 'form-input'}),
+            'address': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3}),
+            'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3}),
+        }
+
+
+class LocationForm(forms.ModelForm):
+    class Meta:
+        model = Location
+        fields = ['name', 'site', 'description', 'capacity']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-input'}),
+            'site': forms.TextInput(attrs={'class': 'form-input'}),
+            'description': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3}),
+            'capacity': forms.NumberInput(attrs={'class': 'form-input'}),
+        }
+
+
+class HorseForm(forms.ModelForm):
+    class Meta:
+        model = Horse
+        fields = [
+            'name', 'date_of_birth', 'age', 'sex', 'color',
+            'dam', 'sire_name', 'breeding', 'photo',
+            'notes', 'passport_number', 'has_passport', 'is_active'
+        ]
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-input'}),
+            'date_of_birth': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'age': forms.NumberInput(attrs={'class': 'form-input'}),
+            'sex': forms.Select(attrs={'class': 'form-select'}),
+            'color': forms.Select(attrs={'class': 'form-select'}),
+            'dam': forms.Select(attrs={'class': 'form-select'}),
+            'sire_name': forms.TextInput(attrs={'class': 'form-input'}),
+            'breeding': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 2}),
+            'photo': forms.ClearableFileInput(attrs={'class': 'form-input'}),
+            'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3}),
+            'passport_number': forms.TextInput(attrs={'class': 'form-input'}),
+            'has_passport': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+        }
+
+
+class PlacementForm(forms.ModelForm):
+    class Meta:
+        model = Placement
+        fields = ['horse', 'owner', 'location', 'rate_type', 'start_date', 'end_date', 'notes']
+        widgets = {
+            'horse': forms.Select(attrs={'class': 'form-select'}),
+            'owner': forms.Select(attrs={'class': 'form-select'}),
+            'location': forms.Select(attrs={'class': 'form-select'}),
+            'rate_type': forms.Select(attrs={'class': 'form-select'}),
+            'start_date': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'end_date': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 2}),
+        }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+        if start_date and end_date and end_date < start_date:
+            raise forms.ValidationError("End date cannot be before start date.")
+        return cleaned_data
+
+    def validate_unique(self):
+        super().validate_unique()
+        try:
+            self.instance.clean()
+        except forms.ValidationError:
+            raise
+        except Exception as e:
+            raise forms.ValidationError(str(e))
+
+
+class MoveHorseForm(forms.Form):
+    """Form for moving a horse to a new location."""
+    new_location = forms.ModelChoiceField(
+        queryset=Location.objects.all(),
+        widget=forms.Select(attrs={'class': 'form-select'})
+    )
+    new_owner = forms.ModelChoiceField(
+        queryset=Owner.objects.all(),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        help_text="Leave empty to keep current owner"
+    )
+    new_rate_type = forms.ModelChoiceField(
+        queryset=RateType.objects.filter(is_active=True),
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        help_text="Leave empty to keep current rate"
+    )
+    move_date = forms.DateField(
+        widget=forms.DateInput(attrs={'class': 'form-input', 'type': 'date'})
+    )
+    notes = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-textarea', 'rows': 2})
+    )
+
+
+class OwnershipShareForm(forms.ModelForm):
+    class Meta:
+        model = OwnershipShare
+        fields = ['owner', 'share_percentage', 'is_primary_contact', 'notes']
+        widgets = {
+            'owner': forms.Select(attrs={'class': 'form-select'}),
+            'share_percentage': forms.NumberInput(attrs={
+                'class': 'form-input', 'step': '0.01', 'min': '0.01', 'max': '100',
+            }),
+            'is_primary_contact': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+            'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 1}),
+        }
+
+
+OwnershipShareFormSet = forms.inlineformset_factory(
+    Horse,
+    OwnershipShare,
+    form=OwnershipShareForm,
+    extra=1,
+    can_delete=True,
+)
+
+
+class RateTypeForm(forms.ModelForm):
+    class Meta:
+        model = RateType
+        fields = ['name', 'daily_rate', 'description', 'is_active']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-input'}),
+            'daily_rate': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01'}),
+            'description': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 2}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-checkbox'}),
+        }

@@ -4,7 +4,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0004_placement_indexes'),
+        ('core', '0004_add_fractional_ownership'),
     ]
 
     operations = [
