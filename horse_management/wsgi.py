@@ -7,6 +7,14 @@ import sys
 import json
 import traceback
 import importlib
+from pathlib import Path
+
+# Ensure the horse_management/ directory is on sys.path so that
+# `core`, `billing`, `health`, etc. resolve to the correct inner
+# packages rather than any stale repo-root duplicates.
+_project_dir = str(Path(__file__).resolve().parent)
+if _project_dir not in sys.path:
+    sys.path.insert(0, _project_dir)
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'horse_management.settings')
 
@@ -32,14 +40,10 @@ def application(environ, start_response):
             settings_file = getattr(mod, '__file__', '?')
             base_dir = str(getattr(mod, 'BASE_DIR', '?'))
             root_urlconf = getattr(mod, 'ROOT_URLCONF', '?')
-            installed_apps = list(getattr(mod, 'INSTALLED_APPS', []))
-            middleware = list(getattr(mod, 'MIDDLEWARE', []))
         except Exception as exc:
             settings_file = f'import error: {exc}'
             base_dir = '?'
             root_urlconf = '?'
-            installed_apps = []
-            middleware = []
 
         body = json.dumps({
             'django_booted': _django_app is not None,
@@ -50,8 +54,6 @@ def application(environ, start_response):
             'settings_file': settings_file,
             'BASE_DIR': base_dir,
             'ROOT_URLCONF': root_urlconf,
-            'INSTALLED_APPS': installed_apps,
-            'MIDDLEWARE': middleware,
             'wsgi_file': __file__,
         }, indent=2).encode()
 
