@@ -25,7 +25,7 @@ if env_file.exists():
 SECRET_KEY = env('SECRET_KEY', default='django-insecure-change-this-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env.bool('DEBUG', default=False)
+DEBUG = env('DEBUG', default=False)
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', default=['localhost', '127.0.0.1', '.vercel.app'])
 CSRF_TRUSTED_ORIGINS = env.list('CSRF_TRUSTED_ORIGINS', default=[
@@ -60,8 +60,6 @@ INSTALLED_APPS = [
     'django_htmx',
     'crispy_forms',
     'crispy_tailwind',
-    'django_celery_beat',
-    'django_celery_results',
 
     # Local apps
     'core.apps.CoreConfig',
@@ -71,7 +69,15 @@ INSTALLED_APPS = [
     'notifications.apps.NotificationsConfig',
 ]
 
+# Only add celery apps when not on Vercel (no worker process there)
+if not os.environ.get('VERCEL'):
+    INSTALLED_APPS += [
+        'django_celery_beat',
+        'django_celery_results',
+    ]
+
 MIDDLEWARE = [
+    'core.middleware.ServerTimingMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -111,9 +117,9 @@ if DATABASE_URL:
     DATABASES = {
         'default': env.db()
     }
-    DATABASES['default']['CONN_MAX_AGE'] = 0
+    DATABASES['default']['CONN_MAX_AGE'] = 0          # Close after each request (required for transaction pooling)
     DATABASES['default']['CONN_HEALTH_CHECKS'] = True
-    DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True
+    DATABASES['default']['DISABLE_SERVER_SIDE_CURSORS'] = True  # Required for Supabase pooler
 else:
     DATABASES = {
         'default': {
@@ -146,9 +152,8 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
+STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-_static_dir = BASE_DIR / 'static'
-STATICFILES_DIRS = [_static_dir] if _static_dir.is_dir() else []
 STORAGES = {
     'staticfiles': {
         'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
@@ -194,6 +199,23 @@ LOGIN_URL = '/accounts/login/'
 SESSION_COOKIE_AGE = 28800  # 8 hours
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 SESSION_COOKIE_HTTPONLY = True
+
+# Logging — surface slow-request warnings in Vercel function logs
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'loggers': {
+        'performance': {
+            'handlers': ['console'],
+            'level': 'WARNING',
+        },
+    },
+}
 
 # Security settings for production (applied when DEBUG=False)
 if not DEBUG:
