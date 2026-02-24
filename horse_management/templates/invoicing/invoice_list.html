@@ -145,25 +145,7 @@
         </div>
     </div>
 
-    <!-- Pagination -->
-    {% if is_paginated %}
-    <nav class="mt-6 flex items-center justify-between">
-      <div class="text-sm text-gray-500">
-        Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
-      </div>
-      <div class="flex gap-2">
-        {% if page_obj.has_previous %}
-          <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&amp;{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}"
-             class="px-3 py-1 rounded border text-sm hover:bg-gray-50">&laquo; Previous</a>
-        {% endif %}
-        <span class="px-3 py-1 text-sm">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
-        {% if page_obj.has_next %}
-          <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&amp;{% endif %}{% endfor %}page={{ page_obj.next_page_number }}"
-             class="px-3 py-1 rounded border text-sm hover:bg-gray-50">Next &raquo;</a>
-        {% endif %}
-      </div>
-    </nav>
-    {% endif %}
+    {% include 'includes/pagination.html' %}
 
 </div>
 {% endblock %}
