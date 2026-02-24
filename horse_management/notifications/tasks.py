@@ -65,6 +65,7 @@ def send_farrier_reminders():
         next_due_date__lte=two_weeks,
         next_due_date__gte=today,
         horse__is_active=True,
+        reminder_sent=False,
     ).values('horse').annotate(
         latest_date=Max('date')
     )
@@ -72,12 +73,15 @@ def send_farrier_reminders():
     for entry in horses_needing_farrier:
         visit = FarrierVisit.objects.filter(
             horse_id=entry['horse'],
-            date=entry['latest_date']
+            date=entry['latest_date'],
+            reminder_sent=False,
         ).first()
 
         if visit:
             success = send_farrier_reminder(visit)
             if success:
+                visit.reminder_sent = True
+                visit.save(update_fields=['reminder_sent'])
                 reminders_sent += 1
 
     return f"Sent {reminders_sent} farrier reminders"

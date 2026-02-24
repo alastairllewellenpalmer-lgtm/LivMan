@@ -298,24 +298,26 @@ class HorseCreateView(LoginRequiredMixin, CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        if self.request.POST:
-            context['ownership_formset'] = OwnershipShareFormSet(self.request.POST)
-        else:
-            context['ownership_formset'] = OwnershipShareFormSet()
+        if 'ownership_formset' not in context:
+            if self.request.POST:
+                context['ownership_formset'] = OwnershipShareFormSet(self.request.POST)
+            else:
+                context['ownership_formset'] = OwnershipShareFormSet()
         return context
 
     def form_valid(self, form):
-        context = self.get_context_data()
-        ownership_formset = context['ownership_formset']
+        ownership_formset = OwnershipShareFormSet(self.request.POST)
         if not ownership_formset.is_valid():
-            return self.form_invalid(form)
+            return self.render_to_response(
+                self.get_context_data(form=form, ownership_formset=ownership_formset)
+            )
         with transaction.atomic():
-            response = super().form_valid(form)
+            self.object = form.save()
             ownership_formset.instance = self.object
             ownership_formset.save()
         _warn_if_incomplete_ownership(self.request, ownership_formset)
         messages.success(self.request, f"Horse '{self.object.name}' created successfully.")
-        return response
+        return redirect(self.get_success_url())
 
 
 class HorseUpdateView(LoginRequiredMixin, UpdateView):
@@ -328,26 +330,30 @@ class HorseUpdateView(LoginRequiredMixin, UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        if self.request.POST:
-            context['ownership_formset'] = OwnershipShareFormSet(
-                self.request.POST, instance=self.object
-            )
-        else:
-            context['ownership_formset'] = OwnershipShareFormSet(instance=self.object)
+        if 'ownership_formset' not in context:
+            if self.request.POST:
+                context['ownership_formset'] = OwnershipShareFormSet(
+                    self.request.POST, instance=self.object
+                )
+            else:
+                context['ownership_formset'] = OwnershipShareFormSet(instance=self.object)
         return context
 
     def form_valid(self, form):
-        context = self.get_context_data()
-        ownership_formset = context['ownership_formset']
+        ownership_formset = OwnershipShareFormSet(
+            self.request.POST, instance=self.object
+        )
         if not ownership_formset.is_valid():
-            return self.form_invalid(form)
+            return self.render_to_response(
+                self.get_context_data(form=form, ownership_formset=ownership_formset)
+            )
         with transaction.atomic():
-            response = super().form_valid(form)
+            self.object = form.save()
             ownership_formset.instance = self.object
             ownership_formset.save()
         _warn_if_incomplete_ownership(self.request, ownership_formset)
         messages.success(self.request, f"Horse '{self.object.name}' updated successfully.")
-        return response
+        return redirect(self.get_success_url())
 
 
 @login_required
@@ -361,12 +367,6 @@ def horse_move(request, pk):
         if form.is_valid():
             move_date = form.cleaned_data['move_date']
 
-            # End current placement
-            if current_placement:
-                current_placement.end_date = move_date - timedelta(days=1)
-                current_placement.save()
-
-            # Create new placement
             new_owner = form.cleaned_data['new_owner']
             new_rate_type = form.cleaned_data['new_rate_type']
 
@@ -398,7 +398,13 @@ def horse_move(request, pk):
                 return render(request, 'horses/horse_move.html', {
                     'horse': horse, 'form': form, 'current_placement': current_placement
                 })
-            new_placement.save()
+
+            with transaction.atomic():
+                # End current placement and create new one atomically
+                if current_placement:
+                    current_placement.end_date = move_date - timedelta(days=1)
+                    current_placement.save()
+                new_placement.save()
 
             messages.success(request, f"{horse.name} moved successfully.")
             return redirect('horse_detail', pk=horse.pk)

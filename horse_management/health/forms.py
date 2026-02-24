@@ -35,6 +35,11 @@ class VaccinationForm(forms.ModelForm):
             'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 2}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Allow blank so model.save() can auto-calculate from vaccination_type interval
+        self.fields['next_due_date'].required = False
+
 
 class FarrierVisitForm(forms.ModelForm):
     class Meta:

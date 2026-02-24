@@ -4,6 +4,7 @@ Views for billing app.
 
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import redirect
 from django.urls import reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DeleteView, ListView, UpdateView
@@ -88,6 +89,13 @@ class ExtraChargeUpdateView(LoginRequiredMixin, UpdateView):
     template_name = 'billing/charge_form.html'
     success_url = reverse_lazy('charge_list')
 
+    def dispatch(self, request, *args, **kwargs):
+        obj = self.get_object()
+        if obj.invoiced:
+            messages.error(request, "This charge has already been invoiced and cannot be edited.")
+            return redirect('charge_list')
+        return super().dispatch(request, *args, **kwargs)
+
     def form_valid(self, form):
         messages.success(self.request, "Charge updated successfully.")
         return super().form_valid(form)
@@ -98,9 +106,16 @@ class ExtraChargeDeleteView(LoginRequiredMixin, DeleteView):
     template_name = 'billing/charge_confirm_delete.html'
     success_url = reverse_lazy('charge_list')
 
-    def delete(self, request, *args, **kwargs):
-        messages.success(request, "Charge deleted successfully.")
-        return super().delete(request, *args, **kwargs)
+    def dispatch(self, request, *args, **kwargs):
+        obj = self.get_object()
+        if obj.invoiced:
+            messages.error(request, "This charge has already been invoiced and cannot be deleted.")
+            return redirect('charge_list')
+        return super().dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        messages.success(self.request, "Charge deleted successfully.")
+        return super().form_valid(form)
 
 
 class ServiceProviderListView(LoginRequiredMixin, ListView):

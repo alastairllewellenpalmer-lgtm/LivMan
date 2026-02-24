@@ -109,12 +109,15 @@
                                     PDF
                                 </a>
                                 {% if invoice.status == 'draft' %}
-                                <a href="{% url 'invoice_send' invoice.pk %}" class="btn-ghost btn-xs text-green-600 hover:text-green-700 hover:bg-green-50">
-                                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/>
-                                    </svg>
-                                    Send
-                                </a>
+                                <form method="post" action="{% url 'invoice_send' invoice.pk %}" class="inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn-ghost btn-xs text-green-600 hover:text-green-700 hover:bg-green-50">
+                                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5"/>
+                                        </svg>
+                                        Send
+                                    </button>
+                                </form>
                                 {% endif %}
                             </div>
                         </td>

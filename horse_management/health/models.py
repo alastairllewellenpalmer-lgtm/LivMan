@@ -44,7 +44,7 @@ class Vaccination(models.Model):
         related_name='vaccinations'
     )
     date_given = models.DateField()
-    next_due_date = models.DateField()
+    next_due_date = models.DateField(null=True, blank=True)
     vet_name = models.CharField(max_length=200, blank=True)
     batch_number = models.CharField(max_length=100, blank=True)
     notes = models.TextField(blank=True)
@@ -121,6 +121,7 @@ class FarrierVisit(models.Model):
         blank=True,
         related_name='farrier_visit'
     )
+    reminder_sent = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

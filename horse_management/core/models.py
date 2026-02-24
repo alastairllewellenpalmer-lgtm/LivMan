@@ -7,6 +7,7 @@ from decimal import Decimal
 
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
+from django.db.models import F
 from django.utils import timezone
 
 
@@ -191,10 +192,16 @@ class Horse(models.Model):
         Returns a list of (owner, share_percentage) tuples.
         Falls back to placement owner at 100% if no ownership records exist.
         """
-        from core.models import HorseOwnership
-        shares = HorseOwnership.get_ownership_shares(self)
+        shares = list(
+            self.ownership_shares.select_related('owner')
+            .values_list('owner', 'share_percentage')
+        )
         if shares:
-            return shares
+            # Resolve owner PKs to Owner instances
+            owner_map = {o.pk: o for o in Owner.objects.filter(
+                pk__in=[s[0] for s in shares]
+            )}
+            return [(owner_map[pk], pct) for pk, pct in shares]
         # Fallback to placement owner
         if self.current_owner:
             return [(self.current_owner, Decimal('100.00'))]
@@ -202,12 +209,8 @@ class Horse(models.Model):
 
     @property
     def has_fractional_ownership(self):
-        """Check if this horse has multiple owners or explicit ownership records."""
-        return self.ownerships.filter(
-            effective_from__lte=date.today()
-        ).filter(
-            models.Q(effective_to__isnull=True) | models.Q(effective_to__gte=date.today())
-        ).exists()
+        """Check if this horse has explicit ownership share records."""
+        return self.ownership_shares.exists()
 
     @property
     def primary_owner(self):
@@ -575,10 +578,12 @@ class BusinessSettings(models.Model):
         return obj
 
     def get_next_invoice_number(self):
-        """Get and increment the next invoice number."""
+        """Get and atomically increment the next invoice number."""
         number = self.next_invoice_number
-        self.next_invoice_number += 1
-        self.save(update_fields=['next_invoice_number'])
+        BusinessSettings.objects.filter(pk=self.pk).update(
+            next_invoice_number=F('next_invoice_number') + 1
+        )
+        self.refresh_from_db(fields=['next_invoice_number'])
         return f"{self.invoice_prefix}{number:05d}"
 
 
