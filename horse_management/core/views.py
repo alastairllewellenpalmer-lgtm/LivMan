@@ -10,7 +10,7 @@ from datetime import timedelta
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.db import connection
+from django.db import connection, transaction
 from django.http import JsonResponse
 from django.core.exceptions import ValidationError
 from django.db.models import Count, Exists, OuterRef, Prefetch, Q, Sum
@@ -180,6 +180,21 @@ def dashboard_health_alerts(request):
     return render(request, 'partials/dashboard_health_alerts.html', context)
 
 
+def _warn_if_incomplete_ownership(request, formset):
+    """Flash a warning if saved ownership shares total less than 100%."""
+    total = sum(
+        f.cleaned_data.get('share_percentage', 0) or 0
+        for f in formset
+        if f.cleaned_data and not f.cleaned_data.get('DELETE', False)
+    )
+    if 0 < total < 100:
+        messages.warning(
+            request,
+            f"Total ownership is {total}% (less than 100%). "
+            "This horse has unallocated ownership."
+        )
+
+
 # Horse Views
 class HorseListView(LoginRequiredMixin, ListView):
     model = Horse
@@ -283,9 +298,26 @@ class HorseCreateView(LoginRequiredMixin, CreateView):
     template_name = 'horses/horse_form.html'
     success_url = reverse_lazy('horse_list')
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.POST:
+            context['ownership_formset'] = OwnershipShareFormSet(self.request.POST)
+        else:
+            context['ownership_formset'] = OwnershipShareFormSet()
+        return context
+
     def form_valid(self, form):
-        messages.success(self.request, f"Horse '{form.instance.name}' created successfully.")
-        return super().form_valid(form)
+        context = self.get_context_data()
+        ownership_formset = context['ownership_formset']
+        if not ownership_formset.is_valid():
+            return self.form_invalid(form)
+        with transaction.atomic():
+            response = super().form_valid(form)
+            ownership_formset.instance = self.object
+            ownership_formset.save()
+        _warn_if_incomplete_ownership(self.request, ownership_formset)
+        messages.success(self.request, f"Horse '{self.object.name}' created successfully.")
+        return response
 
 
 class HorseUpdateView(LoginRequiredMixin, UpdateView):
@@ -296,9 +328,28 @@ class HorseUpdateView(LoginRequiredMixin, UpdateView):
     def get_success_url(self):
         return reverse_lazy('horse_detail', kwargs={'pk': self.object.pk})
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        if self.request.POST:
+            context['ownership_formset'] = OwnershipShareFormSet(
+                self.request.POST, instance=self.object
+            )
+        else:
+            context['ownership_formset'] = OwnershipShareFormSet(instance=self.object)
+        return context
+
     def form_valid(self, form):
-        messages.success(self.request, f"Horse '{form.instance.name}' updated successfully.")
-        return super().form_valid(form)
+        context = self.get_context_data()
+        ownership_formset = context['ownership_formset']
+        if not ownership_formset.is_valid():
+            return self.form_invalid(form)
+        with transaction.atomic():
+            response = super().form_valid(form)
+            ownership_formset.instance = self.object
+            ownership_formset.save()
+        _warn_if_incomplete_ownership(self.request, ownership_formset)
+        messages.success(self.request, f"Horse '{self.object.name}' updated successfully.")
+        return response
 
 
 @login_required
@@ -549,19 +600,8 @@ def manage_ownership_shares(request, pk):
         formset = OwnershipShareFormSet(request.POST, instance=horse)
         if formset.is_valid():
             formset.save()
-            total = sum(
-                f.cleaned_data.get('share_percentage', 0) or 0
-                for f in formset
-                if f.cleaned_data and not f.cleaned_data.get('DELETE', False)
-            )
-            if total < 100:
-                messages.warning(
-                    request,
-                    f"Total ownership is {total}% (less than 100%). "
-                    "This horse has unallocated ownership."
-                )
-            else:
-                messages.success(request, f"Ownership shares for {horse.name} updated.")
+            _warn_if_incomplete_ownership(request, formset)
+            messages.success(request, f"Ownership shares for {horse.name} updated.")
             return redirect('horse_detail', pk=horse.pk)
     else:
         formset = OwnershipShareFormSet(instance=horse)
