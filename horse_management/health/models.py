@@ -2,6 +2,7 @@
 Health and care tracking models.
 """
 
+import calendar
 from datetime import date, timedelta
 from decimal import Decimal
 
@@ -58,11 +59,20 @@ class Vaccination(models.Model):
     def __str__(self):
         return f"{self.horse.name} - {self.vaccination_type.name} ({self.date_given})"
 
+    @staticmethod
+    def _add_months(start_date, months):
+        """Add calendar months to a date, clamping to last day of target month."""
+        month = start_date.month - 1 + months
+        year = start_date.year + month // 12
+        month = month % 12 + 1
+        day = min(start_date.day, calendar.monthrange(year, month)[1])
+        return date(year, month, day)
+
     def save(self, *args, **kwargs):
         # Auto-calculate next due date if not set
         if not self.next_due_date:
             months = self.vaccination_type.interval_months
-            self.next_due_date = self.date_given + timedelta(days=months * 30)
+            self.next_due_date = self._add_months(self.date_given, months)
         super().save(*args, **kwargs)
 
     @property

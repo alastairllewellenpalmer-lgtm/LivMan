@@ -18,6 +18,14 @@
         <form method="post">
             {% csrf_token %}
 
+            {% if form.non_field_errors %}
+              <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                {% for error in form.non_field_errors %}
+                  <p>{{ error }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+
             <fieldset class="p-5 space-y-5">
                 <legend class="section-title">Visit Details</legend>
 
@@ -25,38 +33,59 @@
                     <div class="sm:col-span-2">
                         <label for="{{ form.horse.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.horse.label }}</label>
                         {{ form.horse }}
+                        {% if form.horse.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.horse.errors.0 }}</p>
+                        {% endif %}
                     </div>
 
                     <div>
                         <label for="{{ form.date.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.date.label }}</label>
                         {{ form.date }}
+                        {% if form.date.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.date.errors.0 }}</p>
+                        {% endif %}
                     </div>
 
                     <div>
                         <label for="{{ form.work_done.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.work_done.label }}</label>
                         {{ form.work_done }}
+                        {% if form.work_done.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.work_done.errors.0 }}</p>
+                        {% endif %}
                     </div>
 
                     <div>
                         <label for="{{ form.service_provider.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.service_provider.label }}</label>
                         {{ form.service_provider }}
+                        {% if form.service_provider.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.service_provider.errors.0 }}</p>
+                        {% endif %}
                     </div>
 
                     <div>
                         <label for="{{ form.next_due_date.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.next_due_date.label }}</label>
                         {{ form.next_due_date }}
+                        {% if form.next_due_date.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.next_due_date.errors.0 }}</p>
+                        {% endif %}
                         <p class="text-xs text-slate-400 mt-1">Leave blank to auto-calculate</p>
                     </div>
 
                     <div>
                         <label for="{{ form.cost.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.cost.label }}</label>
                         {{ form.cost }}
+                        {% if form.cost.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.cost.errors.0 }}</p>
+                        {% endif %}
                         <p class="text-xs text-slate-400 mt-1">If set, creates a billable charge</p>
                     </div>
 
                     <div class="sm:col-span-2">
                         <label for="{{ form.notes.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.notes.label }}</label>
                         {{ form.notes }}
+                        {% if form.notes.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                        {% endif %}
                     </div>
                 </div>
             </fieldset>

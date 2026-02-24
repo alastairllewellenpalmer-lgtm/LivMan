@@ -78,8 +78,8 @@ if not os.environ.get('VERCEL'):
     ]
 
 MIDDLEWARE = [
-    'core.middleware.ServerTimingMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'core.middleware.ServerTimingMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -152,7 +152,7 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STORAGES = {
@@ -163,7 +163,7 @@ STORAGES = {
 WHITENOISE_USE_FINDERS = True
 
 # Media files (uploads)
-MEDIA_URL = 'media/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type

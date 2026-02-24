@@ -18,6 +18,14 @@
         <form method="post">
             {% csrf_token %}
 
+            {% if form.non_field_errors %}
+              <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                {% for error in form.non_field_errors %}
+                  <p>{{ error }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+
             <fieldset class="p-5 space-y-5">
                 <legend class="section-title">Vaccination Type Details</legend>
 
@@ -25,24 +33,36 @@
                     <div class="sm:col-span-2">
                         <label for="{{ form.name.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.name.label }}</label>
                         {{ form.name }}
+                        {% if form.name.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                        {% endif %}
                         <p class="text-xs text-slate-400 mt-1">e.g. Flu/Tetanus, Strangles, Rabies</p>
                     </div>
 
                     <div>
                         <label for="{{ form.interval_months.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.interval_months.label }}</label>
                         {{ form.interval_months }}
+                        {% if form.interval_months.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.interval_months.errors.0 }}</p>
+                        {% endif %}
                         <p class="text-xs text-slate-400 mt-1">How often this vaccination is required</p>
                     </div>
 
                     <div>
                         <label for="{{ form.reminder_days_before.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.reminder_days_before.label }}</label>
                         {{ form.reminder_days_before }}
+                        {% if form.reminder_days_before.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.reminder_days_before.errors.0 }}</p>
+                        {% endif %}
                         <p class="text-xs text-slate-400 mt-1">Days before due date to show reminder</p>
                     </div>
 
                     <div class="sm:col-span-2">
                         <label for="{{ form.description.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.description.label }}</label>
                         {{ form.description }}
+                        {% if form.description.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                        {% endif %}
                     </div>
 
                     <div class="sm:col-span-2">
@@ -50,6 +70,9 @@
                             {{ form.is_active }}
                             <span class="text-sm font-medium text-slate-700">Active</span>
                         </label>
+                        {% if form.is_active.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.is_active.errors.0 }}</p>
+                        {% endif %}
                         <p class="text-xs text-slate-400 mt-1">Inactive types won't appear when recording new vaccinations</p>
                     </div>
                 </div>

@@ -39,13 +39,17 @@ def send_invoice_email(invoice):
     )
     email.content_subtype = 'html'
 
-    # Attach PDF
-    pdf_file = generate_invoice_pdf(invoice)
-    email.attach(
-        f"{invoice.invoice_number}.pdf",
-        pdf_file.read(),
-        'application/pdf'
-    )
+    # Attach PDF if generation succeeds
+    try:
+        pdf_file = generate_invoice_pdf(invoice)
+        email.attach(
+            f"{invoice.invoice_number}.pdf",
+            pdf_file.read(),
+            'application/pdf'
+        )
+    except Exception as e:
+        logger.error(f"Failed to generate PDF for {invoice.invoice_number}: {e}")
+        # Send without attachment rather than failing entirely
 
     try:
         email.send()

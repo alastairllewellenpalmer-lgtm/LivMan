@@ -343,14 +343,12 @@ class InvoiceService:
                 skipped.append(owner)
                 continue
 
+            # Preview charges first to avoid consuming an invoice number for zero totals
+            preview = InvoiceService.calculate_invoice_preview(owner, first_day, last_day)
+            if preview['total'] <= 0:
+                continue
+
             invoice = InvoiceService.create_invoice(owner, first_day, last_day)
-            if invoice.total > 0:
-                invoices.append(invoice)
-            else:
-                # Un-mark any extra charges before deleting zero-total invoice
-                ExtraCharge.objects.filter(invoice=invoice).update(
-                    invoiced=False, invoice=None
-                )
-                invoice.delete()
+            invoices.append(invoice)
 
         return invoices, skipped

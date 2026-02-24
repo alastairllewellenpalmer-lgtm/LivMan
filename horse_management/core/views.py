@@ -383,6 +383,17 @@ def horse_move(request, pk):
                     'horse': horse, 'form': form, 'current_placement': current_placement
                 })
 
+            # Validate move date isn't before current placement start
+            if current_placement and move_date <= current_placement.start_date:
+                messages.error(
+                    request,
+                    f"Move date must be after the current placement start date "
+                    f"({current_placement.start_date})."
+                )
+                return render(request, 'horses/horse_move.html', {
+                    'horse': horse, 'form': form, 'current_placement': current_placement
+                })
+
             new_placement = Placement(
                 horse=horse,
                 owner=new_owner,
@@ -603,7 +614,8 @@ def manage_ownership_shares(request, pk):
     if request.method == 'POST':
         formset = OwnershipShareFormSet(request.POST, instance=horse)
         if formset.is_valid():
-            formset.save()
+            with transaction.atomic():
+                formset.save()
             _warn_if_incomplete_ownership(request, formset)
             messages.success(request, f"Ownership shares for {horse.name} updated.")
             return redirect('horse_detail', pk=horse.pk)

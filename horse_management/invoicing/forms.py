@@ -51,6 +51,15 @@ class InvoiceCreateForm(forms.Form):
 class InvoiceUpdateForm(forms.ModelForm):
     """Form for updating invoice details."""
 
+    # Valid status transitions
+    ALLOWED_TRANSITIONS = {
+        'draft': {'draft', 'sent', 'cancelled'},
+        'sent': {'sent', 'paid', 'overdue', 'cancelled'},
+        'overdue': {'overdue', 'paid', 'cancelled'},
+        'paid': {'paid'},
+        'cancelled': {'cancelled'},
+    }
+
     class Meta:
         model = Invoice
         fields = ['status', 'payment_terms_days', 'due_date', 'notes']
@@ -60,6 +69,18 @@ class InvoiceUpdateForm(forms.ModelForm):
             'due_date': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
             'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 3}),
         }
+
+    def clean_status(self):
+        new_status = self.cleaned_data['status']
+        if self.instance and self.instance.pk:
+            current_status = self.instance.status
+            allowed = self.ALLOWED_TRANSITIONS.get(current_status, set())
+            if new_status not in allowed:
+                raise forms.ValidationError(
+                    f"Cannot change status from '{self.instance.get_status_display()}' "
+                    f"to '{dict(Invoice.Status.choices).get(new_status, new_status)}'."
+                )
+        return new_status
 
 
 class MonthlyInvoiceForm(forms.Form):
@@ -75,10 +96,14 @@ class MonthlyInvoiceForm(forms.Form):
         min_value=2020,
         max_value=2100,
         widget=forms.NumberInput(attrs={'class': 'form-input'}),
-        initial=timezone.now().year
     )
     month = forms.ChoiceField(
         choices=MONTH_CHOICES,
         widget=forms.Select(attrs={'class': 'form-select'}),
-        initial=timezone.now().month
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        now = timezone.now()
+        self.fields['year'].initial = now.year
+        self.fields['month'].initial = now.month

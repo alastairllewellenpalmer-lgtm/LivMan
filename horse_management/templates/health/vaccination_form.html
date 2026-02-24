@@ -18,6 +18,14 @@
         <form method="post">
             {% csrf_token %}
 
+            {% if form.non_field_errors %}
+              <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                {% for error in form.non_field_errors %}
+                  <p>{{ error }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+
             <fieldset class="p-5 space-y-5">
                 <legend class="section-title">Vaccination Details</legend>
 
@@ -25,37 +33,58 @@
                     <div class="sm:col-span-2">
                         <label for="{{ form.horse.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.horse.label }}</label>
                         {{ form.horse }}
+                        {% if form.horse.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.horse.errors.0 }}</p>
+                        {% endif %}
                     </div>
 
                     <div class="sm:col-span-2">
                         <label for="{{ form.vaccination_type.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.vaccination_type.label }}</label>
                         {{ form.vaccination_type }}
+                        {% if form.vaccination_type.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.vaccination_type.errors.0 }}</p>
+                        {% endif %}
                     </div>
 
                     <div>
                         <label for="{{ form.date_given.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.date_given.label }}</label>
                         {{ form.date_given }}
+                        {% if form.date_given.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.date_given.errors.0 }}</p>
+                        {% endif %}
                     </div>
 
                     <div>
                         <label for="{{ form.next_due_date.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.next_due_date.label }}</label>
                         {{ form.next_due_date }}
+                        {% if form.next_due_date.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.next_due_date.errors.0 }}</p>
+                        {% endif %}
                         <p class="text-xs text-slate-400 mt-1">Leave blank to auto-calculate</p>
                     </div>
 
                     <div>
                         <label for="{{ form.vet_name.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.vet_name.label }}</label>
                         {{ form.vet_name }}
+                        {% if form.vet_name.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.vet_name.errors.0 }}</p>
+                        {% endif %}
                     </div>
 
                     <div>
                         <label for="{{ form.batch_number.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.batch_number.label }}</label>
                         {{ form.batch_number }}
+                        {% if form.batch_number.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.batch_number.errors.0 }}</p>
+                        {% endif %}
                     </div>
 
                     <div class="sm:col-span-2">
                         <label for="{{ form.notes.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.notes.label }}</label>
                         {{ form.notes }}
+                        {% if form.notes.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                        {% endif %}
                     </div>
                 </div>
             </fieldset>

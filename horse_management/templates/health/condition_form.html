@@ -18,6 +18,14 @@
         <form method="post">
             {% csrf_token %}
 
+            {% if form.non_field_errors %}
+              <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                {% for error in form.non_field_errors %}
+                  <p>{{ error }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+
             <fieldset class="p-5 space-y-5">
                 <legend class="section-title">Condition Details</legend>
 
@@ -25,27 +33,42 @@
                     <div class="sm:col-span-2">
                         <label for="{{ form.horse.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.horse.label }}</label>
                         {{ form.horse }}
+                        {% if form.horse.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.horse.errors.0 }}</p>
+                        {% endif %}
                     </div>
 
                     <div>
                         <label for="{{ form.name.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.name.label }}</label>
                         {{ form.name }}
+                        {% if form.name.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                        {% endif %}
                         <p class="text-xs text-slate-400 mt-1">e.g. Laminitis, Sweet Itch, Colic</p>
                     </div>
 
                     <div>
                         <label for="{{ form.diagnosed_date.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.diagnosed_date.label }}</label>
                         {{ form.diagnosed_date }}
+                        {% if form.diagnosed_date.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.diagnosed_date.errors.0 }}</p>
+                        {% endif %}
                     </div>
 
                     <div class="sm:col-span-2">
                         <label for="{{ form.status.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.status.label }}</label>
                         {{ form.status }}
+                        {% if form.status.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.status.errors.0 }}</p>
+                        {% endif %}
                     </div>
 
                     <div class="sm:col-span-2">
                         <label for="{{ form.notes.id_for_label }}" class="text-sm font-medium text-slate-700">{{ form.notes.label }}</label>
                         {{ form.notes }}
+                        {% if form.notes.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                        {% endif %}
                     </div>
                 </div>
             </fieldset>

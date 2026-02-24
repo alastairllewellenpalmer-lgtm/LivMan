@@ -16,6 +16,14 @@
         <form method="post" class="divide-y divide-slate-100">
             {% csrf_token %}
 
+            {% if form.non_field_errors %}
+              <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                {% for error in form.non_field_errors %}
+                  <p>{{ error }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+
             <!-- Provider Details -->
             <fieldset class="p-5 space-y-4">
                 <legend class="section-title">Provider Details</legend>
@@ -23,30 +31,51 @@
                     <div class="sm:col-span-2">
                         <label for="id_name" class="block text-sm font-medium text-slate-700">Name *</label>
                         {{ form.name }}
+                        {% if form.name.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.name.errors.0 }}</p>
+                        {% endif %}
                     </div>
                     <div>
                         <label for="id_provider_type" class="block text-sm font-medium text-slate-700">Type *</label>
                         {{ form.provider_type }}
+                        {% if form.provider_type.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.provider_type.errors.0 }}</p>
+                        {% endif %}
                     </div>
                     <div>
                         <label for="id_phone" class="block text-sm font-medium text-slate-700">Phone</label>
                         {{ form.phone }}
+                        {% if form.phone.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.phone.errors.0 }}</p>
+                        {% endif %}
                     </div>
                     <div class="sm:col-span-2">
                         <label for="id_email" class="block text-sm font-medium text-slate-700">Email</label>
                         {{ form.email }}
+                        {% if form.email.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.email.errors.0 }}</p>
+                        {% endif %}
                     </div>
                     <div class="sm:col-span-2">
                         <label for="id_address" class="block text-sm font-medium text-slate-700">Address</label>
                         {{ form.address }}
+                        {% if form.address.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.address.errors.0 }}</p>
+                        {% endif %}
                     </div>
                     <div class="sm:col-span-2">
                         <label for="id_notes" class="block text-sm font-medium text-slate-700">Notes</label>
                         {{ form.notes }}
+                        {% if form.notes.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                        {% endif %}
                     </div>
                     <div class="sm:col-span-2 flex items-center gap-2">
                         {{ form.is_active }}
                         <label for="id_is_active" class="text-sm font-medium text-slate-700">Active</label>
+                        {% if form.is_active.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.is_active.errors.0 }}</p>
+                        {% endif %}
                     </div>
                 </div>
             </fieldset>

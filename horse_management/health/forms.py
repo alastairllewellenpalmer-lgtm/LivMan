@@ -40,6 +40,14 @@ class VaccinationForm(forms.ModelForm):
         # Allow blank so model.save() can auto-calculate from vaccination_type interval
         self.fields['next_due_date'].required = False
 
+    def clean(self):
+        cleaned_data = super().clean()
+        date_given = cleaned_data.get('date_given')
+        next_due = cleaned_data.get('next_due_date')
+        if date_given and next_due and next_due <= date_given:
+            self.add_error('next_due_date', "Next due date must be after the date given.")
+        return cleaned_data
+
 
 class FarrierVisitForm(forms.ModelForm):
     class Meta:
@@ -57,6 +65,14 @@ class FarrierVisitForm(forms.ModelForm):
             'cost': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01'}),
             'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 2}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        visit_date = cleaned_data.get('date')
+        next_due = cleaned_data.get('next_due_date')
+        if visit_date and next_due and next_due <= visit_date:
+            self.add_error('next_due_date', "Next due date must be after the visit date.")
+        return cleaned_data
 
 
 class VaccinationTypeForm(forms.ModelForm):
@@ -135,6 +151,14 @@ class VetVisitForm(forms.ModelForm):
             'cost': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01'}),
             'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 2}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        visit_date = cleaned_data.get('date')
+        follow_up = cleaned_data.get('follow_up_date')
+        if visit_date and follow_up and follow_up <= visit_date:
+            self.add_error('follow_up_date', "Follow-up date must be after the visit date.")
+        return cleaned_data
 
 
 class BreedingRecordForm(forms.ModelForm):

@@ -16,6 +16,14 @@
         <form method="post" enctype="multipart/form-data" class="divide-y divide-slate-100">
             {% csrf_token %}
 
+            {% if form.non_field_errors %}
+              <div class="mb-4 p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+                {% for error in form.non_field_errors %}
+                  <p>{{ error }}</p>
+                {% endfor %}
+              </div>
+            {% endif %}
+
             <!-- Service Details -->
             <fieldset class="p-5 space-y-4">
                 <legend class="section-title">Service Details</legend>
@@ -23,26 +31,44 @@
                     <div>
                         <label for="id_horse" class="block text-sm font-medium text-slate-700">Horse *</label>
                         {{ form.horse }}
+                        {% if form.horse.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.horse.errors.0 }}</p>
+                        {% endif %}
                     </div>
                     <div>
                         <label for="id_owner" class="block text-sm font-medium text-slate-700">Bill To (Owner) *</label>
                         {{ form.owner }}
+                        {% if form.owner.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.owner.errors.0 }}</p>
+                        {% endif %}
                     </div>
                     <div>
                         <label for="id_charge_type" class="block text-sm font-medium text-slate-700">Type *</label>
                         {{ form.charge_type }}
+                        {% if form.charge_type.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.charge_type.errors.0 }}</p>
+                        {% endif %}
                     </div>
                     <div>
                         <label for="id_date" class="block text-sm font-medium text-slate-700">Date *</label>
                         {{ form.date }}
+                        {% if form.date.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.date.errors.0 }}</p>
+                        {% endif %}
                     </div>
                     <div>
                         <label for="id_service_provider" class="block text-sm font-medium text-slate-700">Service Provider</label>
                         {{ form.service_provider }}
+                        {% if form.service_provider.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.service_provider.errors.0 }}</p>
+                        {% endif %}
                     </div>
                     <div>
                         <label for="id_amount" class="block text-sm font-medium text-slate-700">Amount *</label>
                         {{ form.amount }}
+                        {% if form.amount.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.amount.errors.0 }}</p>
+                        {% endif %}
                     </div>
                 </div>
             </fieldset>
@@ -54,10 +80,16 @@
                     <div class="sm:col-span-2">
                         <label for="id_description" class="block text-sm font-medium text-slate-700">Description *</label>
                         {{ form.description }}
+                        {% if form.description.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.description.errors.0 }}</p>
+                        {% endif %}
                     </div>
                     <div class="sm:col-span-2">
                         <label for="id_notes" class="block text-sm font-medium text-slate-700">Notes</label>
                         {{ form.notes }}
+                        {% if form.notes.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.notes.errors.0 }}</p>
+                        {% endif %}
                     </div>
                 </div>
             </fieldset>
@@ -69,6 +101,9 @@
                     <div class="sm:col-span-2">
                         <label for="id_receipt_image" class="block text-sm font-medium text-slate-700">Receipt Image</label>
                         {{ form.receipt_image }}
+                        {% if form.receipt_image.errors %}
+                          <p class="mt-1 text-sm text-red-600">{{ form.receipt_image.errors.0 }}</p>
+                        {% endif %}
                         {% if object.receipt_image %}
                         <p class="mt-1 text-sm text-slate-500">
                             Current: <a href="{{ object.receipt_image.url }}" target="_blank" class="link">View receipt</a>

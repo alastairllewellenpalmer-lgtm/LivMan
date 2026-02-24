@@ -92,7 +92,7 @@ class Location(models.Model):
     @property
     def availability(self):
         """Return available spaces if capacity is set."""
-        if self.capacity:
+        if self.capacity is not None:
             return self.capacity - self.current_horse_count
         return None
 
@@ -401,6 +401,7 @@ class HorseOwnership(models.Model):
 
     class Meta:
         ordering = ['-effective_from', 'owner__name']
+        unique_together = [('horse', 'owner', 'effective_from')]
         verbose_name = "Horse Ownership"
         verbose_name_plural = "Horse Ownerships"
 
@@ -621,7 +622,7 @@ class Invoice(models.Model):
         default=Status.DRAFT
     )
     payment_terms_days = models.PositiveIntegerField(default=30)
-    due_date = models.DateField()
+    due_date = models.DateField(null=True, blank=True)
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     sent_at = models.DateTimeField(null=True, blank=True)

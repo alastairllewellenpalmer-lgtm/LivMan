@@ -138,31 +138,22 @@
 
     <!-- Pagination -->
     {% if is_paginated %}
-    <div class="card px-5 py-3 flex items-center justify-between">
-        <p class="text-sm text-slate-500">
-            Showing <span class="font-medium text-slate-700">{{ page_obj.start_index }}</span>
-            to <span class="font-medium text-slate-700">{{ page_obj.end_index }}</span>
-            of <span class="font-medium text-slate-700">{{ paginator.count }}</span> results
-        </p>
-        <div class="flex items-center gap-2">
-            {% if page_obj.has_previous %}
-            <a href="?page={{ page_obj.previous_page_number }}" class="btn-secondary btn-xs">
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/>
-                </svg>
-                Previous
-            </a>
-            {% endif %}
-            {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}" class="btn-secondary btn-xs">
-                Next
-                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
-                </svg>
-            </a>
-            {% endif %}
-        </div>
-    </div>
+    <nav class="mt-6 flex items-center justify-between">
+      <div class="text-sm text-gray-500">
+        Showing {{ page_obj.start_index }}–{{ page_obj.end_index }} of {{ page_obj.paginator.count }}
+      </div>
+      <div class="flex gap-2">
+        {% if page_obj.has_previous %}
+          <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&amp;{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}"
+             class="px-3 py-1 rounded border text-sm hover:bg-gray-50">&laquo; Previous</a>
+        {% endif %}
+        <span class="px-3 py-1 text-sm">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+          <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&amp;{% endif %}{% endfor %}page={{ page_obj.next_page_number }}"
+             class="px-3 py-1 rounded border text-sm hover:bg-gray-50">Next &raquo;</a>
+        {% endif %}
+      </div>
+    </nav>
     {% endif %}
 
 </div>

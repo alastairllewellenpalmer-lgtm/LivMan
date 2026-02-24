@@ -2,6 +2,7 @@
 Celery tasks for automated notifications.
 """
 
+import logging
 from datetime import timedelta
 
 from celery import shared_task
@@ -16,6 +17,8 @@ from .emails import (
     send_invoice_overdue_reminder,
     send_vaccination_reminder,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @shared_task
@@ -34,15 +37,18 @@ def send_vaccination_reminders():
     ).select_related('horse', 'vaccination_type')
 
     for vaccination in vaccinations:
-        reminder_days = vaccination.vaccination_type.reminder_days_before
-        reminder_date = vaccination.next_due_date - timedelta(days=reminder_days)
+        try:
+            reminder_days = vaccination.vaccination_type.reminder_days_before
+            reminder_date = vaccination.next_due_date - timedelta(days=reminder_days)
 
-        if today >= reminder_date:
-            success = send_vaccination_reminder(vaccination)
-            if success:
-                vaccination.reminder_sent = True
-                vaccination.save(update_fields=['reminder_sent'])
-                reminders_sent += 1
+            if today >= reminder_date:
+                success = send_vaccination_reminder(vaccination)
+                if success:
+                    vaccination.reminder_sent = True
+                    vaccination.save(update_fields=['reminder_sent'])
+                    reminders_sent += 1
+        except Exception:
+            logger.exception("Error processing vaccination reminder for pk=%s", vaccination.pk)
 
     return f"Sent {reminders_sent} vaccination reminders"
 
@@ -71,18 +77,21 @@ def send_farrier_reminders():
     )
 
     for entry in horses_needing_farrier:
-        visit = FarrierVisit.objects.filter(
-            horse_id=entry['horse'],
-            date=entry['latest_date'],
-            reminder_sent=False,
-        ).first()
+        try:
+            visit = FarrierVisit.objects.filter(
+                horse_id=entry['horse'],
+                date=entry['latest_date'],
+                reminder_sent=False,
+            ).first()
 
-        if visit:
-            success = send_farrier_reminder(visit)
-            if success:
-                visit.reminder_sent = True
-                visit.save(update_fields=['reminder_sent'])
-                reminders_sent += 1
+            if visit:
+                success = send_farrier_reminder(visit)
+                if success:
+                    visit.reminder_sent = True
+                    visit.save(update_fields=['reminder_sent'])
+                    reminders_sent += 1
+        except Exception:
+            logger.exception("Error processing farrier reminder for horse_id=%s", entry['horse'])
 
     return f"Sent {reminders_sent} farrier reminders"
 
@@ -103,14 +112,15 @@ def send_overdue_invoice_reminders():
     ).select_related('owner')
 
     for invoice in overdue_invoices:
-        # Mark as overdue
-        invoice.status = Invoice.Status.OVERDUE
-        invoice.save(update_fields=['status'])
-
-        # Send reminder
-        success = send_invoice_overdue_reminder(invoice)
-        if success:
-            reminders_sent += 1
+        try:
+            # Send reminder first, then update status
+            success = send_invoice_overdue_reminder(invoice)
+            invoice.status = Invoice.Status.OVERDUE
+            invoice.save(update_fields=['status'])
+            if success:
+                reminders_sent += 1
+        except Exception:
+            logger.exception("Error processing overdue invoice reminder for pk=%s", invoice.pk)
 
     return f"Sent {reminders_sent} overdue invoice reminders"
 
@@ -133,25 +143,28 @@ def send_ehv_reminders():
     ).select_related('mare')
 
     for record in active_records:
-        ehv_dates = record.ehv_vaccination_dates
-        sent_months = record.sent_ehv_months
+        try:
+            ehv_dates = record.ehv_vaccination_dates
+            sent_months = record.sent_ehv_months
 
-        for month, due_date in ehv_dates.items():
-            if month in sent_months:
-                continue
+            for month, due_date in ehv_dates.items():
+                if month in sent_months:
+                    continue
 
-            # Send reminder 14 days before due date
-            reminder_date = due_date - timedelta(days=14)
-            if today >= reminder_date and today <= due_date + timedelta(days=7):
-                success = send_ehv_reminder(record, month)
-                if success:
-                    # Mark this month as sent
-                    if record.ehv_reminders_sent:
-                        record.ehv_reminders_sent += f',{month}'
-                    else:
-                        record.ehv_reminders_sent = str(month)
-                    record.save(update_fields=['ehv_reminders_sent'])
-                    reminders_sent += 1
+                # Send reminder 14 days before due date
+                reminder_date = due_date - timedelta(days=14)
+                if today >= reminder_date and today <= due_date + timedelta(days=7):
+                    success = send_ehv_reminder(record, month)
+                    if success:
+                        # Mark this month as sent
+                        if record.ehv_reminders_sent:
+                            record.ehv_reminders_sent += f',{month}'
+                        else:
+                            record.ehv_reminders_sent = str(month)
+                        record.save(update_fields=['ehv_reminders_sent'])
+                        reminders_sent += 1
+        except Exception:
+            logger.exception("Error processing EHV reminder for record pk=%s", record.pk)
 
     return f"Sent {reminders_sent} EHV reminders"
 
