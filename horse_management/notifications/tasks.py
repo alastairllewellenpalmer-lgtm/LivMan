@@ -33,6 +33,7 @@ def send_vaccination_reminders():
     # Get vaccinations due within their reminder period that haven't been notified
     vaccinations = Vaccination.objects.filter(
         reminder_sent=False,
+        next_due_date__isnull=False,
         horse__is_active=True,
     ).select_related('horse', 'vaccination_type')
 

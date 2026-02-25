@@ -663,6 +663,8 @@ class Invoice(models.Model):
         """Check if invoice is overdue."""
         if self.status in [self.Status.PAID, self.Status.CANCELLED]:
             return False
+        if not self.due_date:
+            return False
         return timezone.now().date() > self.due_date
 
 

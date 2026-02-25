@@ -88,6 +88,8 @@ class Vaccination(models.Model):
     @property
     def is_overdue(self):
         """Check if vaccination is overdue."""
+        if not self.next_due_date:
+            return False
         from django.utils import timezone
         return timezone.now().date() > self.next_due_date
 
