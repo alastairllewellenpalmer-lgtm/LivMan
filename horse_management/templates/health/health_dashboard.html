@@ -18,6 +18,7 @@
         <nav class="-mb-px flex gap-1 overflow-x-auto" aria-label="Health tabs">
             {% for tab_key, tab_label in tabs %}
             <button
+                hx-boost="false"
                 hx-get="{% url 'health_dashboard' %}?type={{ tab_key }}"
                 hx-target="#health-table-area"
                 hx-push-url="{% url 'health_dashboard' %}?type={{ tab_key }}"

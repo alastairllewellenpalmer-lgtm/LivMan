@@ -8,6 +8,7 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponse, HttpResponseBadRequest
@@ -75,6 +76,7 @@ def health_dashboard(request):
 
     if tab == 'overview':
         thirty_days = today + timedelta(days=30)
+        two_weeks = today + timedelta(days=14)
 
         # Overdue vaccinations
         overdue_vaccinations = Vaccination.objects.select_related(
@@ -100,7 +102,6 @@ def health_dashboard(request):
         ).order_by('next_due_date')
 
         # Due soon farrier
-        two_weeks = today + timedelta(days=14)
         due_farrier = FarrierVisit.objects.select_related(
             'horse', 'service_provider'
         ).filter(
@@ -109,12 +110,22 @@ def health_dashboard(request):
             next_due_date__lte=two_weeks,
         ).order_by('next_due_date')
 
-        # Vet follow-ups
-        vet_followups = VetVisit.objects.select_related(
+        # Vet follow-ups (overdue)
+        overdue_vet = VetVisit.objects.select_related(
             'horse', 'vet'
         ).filter(
             horse__is_active=True,
             follow_up_date__isnull=False,
+            follow_up_date__lt=today,
+        ).order_by('follow_up_date')
+
+        # Vet follow-ups (upcoming)
+        due_vet = VetVisit.objects.select_related(
+            'horse', 'vet'
+        ).filter(
+            horse__is_active=True,
+            follow_up_date__isnull=False,
+            follow_up_date__gte=today,
             follow_up_date__lte=thirty_days,
         ).order_by('follow_up_date')
 
@@ -131,17 +142,76 @@ def health_dashboard(request):
             status='active',
         ).order_by('-created_at')[:10]
 
+        # Build unified action_required list (overdue items)
+        action_required = []
+        for vax in overdue_vaccinations:
+            action_required.append({
+                'horse': vax.horse,
+                'type': 'Vaccination',
+                'detail': vax.vaccination_type.name,
+                'due_date': vax.next_due_date,
+                'url': reverse('vaccination_create') + f'?horse={vax.horse.pk}',
+                'action_label': 'Re-vaccinate',
+            })
+        for visit in overdue_farrier:
+            action_required.append({
+                'horse': visit.horse,
+                'type': 'Farrier',
+                'detail': visit.get_work_done_display(),
+                'due_date': visit.next_due_date,
+                'url': reverse('farrier_create') + f'?horse={visit.horse.pk}',
+                'action_label': 'Book',
+            })
+        for v in overdue_vet:
+            action_required.append({
+                'horse': v.horse,
+                'type': 'Vet Follow-up',
+                'detail': v.reason[:60] if v.reason else '-',
+                'due_date': v.follow_up_date,
+                'url': reverse('vet_visit_create') + f'?horse={v.horse.pk}',
+                'action_label': 'New Visit',
+            })
+        action_required.sort(key=lambda x: x['due_date'])
+
+        # Build unified coming_up list (due soon items)
+        coming_up = []
+        for vax in due_vaccinations:
+            coming_up.append({
+                'horse': vax.horse,
+                'type': 'Vaccination',
+                'detail': vax.vaccination_type.name,
+                'due_date': vax.next_due_date,
+                'url': reverse('vaccination_create') + f'?horse={vax.horse.pk}',
+                'action_label': 'Re-vaccinate',
+            })
+        for visit in due_farrier:
+            coming_up.append({
+                'horse': visit.horse,
+                'type': 'Farrier',
+                'detail': visit.get_work_done_display(),
+                'due_date': visit.next_due_date,
+                'url': reverse('farrier_create') + f'?horse={visit.horse.pk}',
+                'action_label': 'Book',
+            })
+        for v in due_vet:
+            coming_up.append({
+                'horse': v.horse,
+                'type': 'Vet Follow-up',
+                'detail': v.reason[:60] if v.reason else '-',
+                'due_date': v.follow_up_date,
+                'url': reverse('vet_visit_create') + f'?horse={v.horse.pk}',
+                'action_label': 'New Visit',
+            })
+        coming_up.sort(key=lambda x: x['due_date'])
+
         context.update({
-            'overdue_vaccinations': overdue_vaccinations,
-            'due_vaccinations': due_vaccinations,
-            'overdue_farrier': overdue_farrier,
-            'due_farrier': due_farrier,
-            'vet_followups': vet_followups,
+            'action_required': action_required,
+            'coming_up': coming_up,
             'high_egg_counts': high_egg_counts,
             'active_conditions': active_conditions,
             'stat_overdue_vax': overdue_vaccinations.count(),
             'stat_due_farrier': overdue_farrier.count() + due_farrier.count(),
-            'stat_vet_followups': vet_followups.count(),
+            'stat_vet_followups': overdue_vet.count() + due_vet.count(),
             'stat_high_eggs': high_egg_counts.count(),
         })
 
@@ -160,7 +230,11 @@ def health_dashboard(request):
         horse = request.GET.get('horse')
         if horse:
             queryset = queryset.filter(horse_id=horse)
-        context['vaccinations'] = queryset.order_by('next_due_date')[:100]
+        paginator = Paginator(queryset.order_by('next_due_date'), 50)
+        page_obj = paginator.get_page(request.GET.get('page'))
+        context['vaccinations'] = page_obj
+        context['page_obj'] = page_obj
+        context['is_paginated'] = page_obj.has_other_pages()
         context['horses'] = Horse.objects.filter(is_active=True)
 
     elif tab == 'farrier':
@@ -178,7 +252,11 @@ def health_dashboard(request):
         horse = request.GET.get('horse')
         if horse:
             queryset = queryset.filter(horse_id=horse)
-        context['visits'] = queryset.order_by('-date')[:100]
+        paginator = Paginator(queryset.order_by('-date'), 50)
+        page_obj = paginator.get_page(request.GET.get('page'))
+        context['visits'] = page_obj
+        context['page_obj'] = page_obj
+        context['is_paginated'] = page_obj.has_other_pages()
         context['horses'] = Horse.objects.filter(is_active=True)
 
     elif tab == 'worming':
@@ -188,7 +266,11 @@ def health_dashboard(request):
         horse = request.GET.get('horse')
         if horse:
             queryset = queryset.filter(horse_id=horse)
-        context['treatments'] = queryset.order_by('-date')[:100]
+        paginator = Paginator(queryset.order_by('-date'), 50)
+        page_obj = paginator.get_page(request.GET.get('page'))
+        context['treatments'] = page_obj
+        context['page_obj'] = page_obj
+        context['is_paginated'] = page_obj.has_other_pages()
         context['horses'] = Horse.objects.filter(is_active=True)
 
     elif tab == 'egg_counts':
@@ -198,7 +280,11 @@ def health_dashboard(request):
         horse = request.GET.get('horse')
         if horse:
             queryset = queryset.filter(horse_id=horse)
-        context['egg_counts'] = queryset.order_by('-date')[:100]
+        paginator = Paginator(queryset.order_by('-date'), 50)
+        page_obj = paginator.get_page(request.GET.get('page'))
+        context['egg_counts'] = page_obj
+        context['page_obj'] = page_obj
+        context['is_paginated'] = page_obj.has_other_pages()
         context['horses'] = Horse.objects.filter(is_active=True)
 
     elif tab == 'conditions':
@@ -211,7 +297,11 @@ def health_dashboard(request):
         status = request.GET.get('status')
         if status:
             queryset = queryset.filter(status=status)
-        context['conditions'] = queryset[:100]
+        paginator = Paginator(queryset.order_by('-created_at'), 50)
+        page_obj = paginator.get_page(request.GET.get('page'))
+        context['conditions'] = page_obj
+        context['page_obj'] = page_obj
+        context['is_paginated'] = page_obj.has_other_pages()
         context['horses'] = Horse.objects.filter(is_active=True)
 
     elif tab == 'vet_visits':
@@ -221,7 +311,11 @@ def health_dashboard(request):
         horse = request.GET.get('horse')
         if horse:
             queryset = queryset.filter(horse_id=horse)
-        context['vet_visits'] = queryset.order_by('-date')[:100]
+        paginator = Paginator(queryset.order_by('-date'), 50)
+        page_obj = paginator.get_page(request.GET.get('page'))
+        context['vet_visits'] = page_obj
+        context['page_obj'] = page_obj
+        context['is_paginated'] = page_obj.has_other_pages()
         context['horses'] = Horse.objects.filter(is_active=True)
 
     if is_htmx:

@@ -1,0 +1,42 @@
+{% if is_paginated %}
+<nav class="mt-6 card px-5 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+    <p class="text-sm text-slate-500">
+        Showing <span class="font-medium text-slate-700">{{ page_obj.start_index }}</span>
+        to <span class="font-medium text-slate-700">{{ page_obj.end_index }}</span>
+        of <span class="font-medium text-slate-700">{{ page_obj.paginator.count }}</span> results
+    </p>
+    <div class="flex items-center gap-2">
+        {% if page_obj.has_previous %}
+        <button
+            hx-boost="false"
+            hx-get="{% url 'health_dashboard' %}?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&amp;{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}"
+            hx-target="#health-table-area"
+            hx-swap="innerHTML"
+            hx-push-url="true"
+            class="btn-secondary btn-xs"
+        >
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/>
+            </svg>
+            Previous
+        </button>
+        {% endif %}
+        <span class="text-sm text-slate-500">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <button
+            hx-boost="false"
+            hx-get="{% url 'health_dashboard' %}?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&amp;{% endif %}{% endfor %}page={{ page_obj.next_page_number }}"
+            hx-target="#health-table-area"
+            hx-swap="innerHTML"
+            hx-push-url="true"
+            class="btn-secondary btn-xs"
+        >
+            Next
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/>
+            </svg>
+        </button>
+        {% endif %}
+    </div>
+</nav>
+{% endif %}

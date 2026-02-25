@@ -9,6 +9,37 @@
     </a>
 </div>
 
+<!-- Filter Bar -->
+<div class="card px-5 py-4 mb-4">
+    <form hx-boost="false"
+          hx-get="{% url 'health_dashboard' %}"
+          hx-target="#health-table-area"
+          hx-swap="innerHTML"
+          hx-push-url="true"
+          class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <input type="hidden" name="type" value="worming">
+        <div>
+            <label class="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Horse</label>
+            <select name="horse" class="form-select">
+                <option value="">All horses</option>
+                {% for h in horses %}
+                <option value="{{ h.pk }}" {% if request.GET.horse == h.pk|stringformat:"s" %}selected{% endif %}>{{ h.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex items-end gap-2">
+            <button type="submit" class="btn-secondary">Filter</button>
+            <button type="button"
+                    hx-boost="false"
+                    hx-get="{% url 'health_dashboard' %}?type=worming"
+                    hx-target="#health-table-area"
+                    hx-swap="innerHTML"
+                    hx-push-url="true"
+                    class="btn-secondary">Clear</button>
+        </div>
+    </form>
+</div>
+
 <!-- Worming Treatment Table -->
 <div class="card overflow-hidden">
     <div class="overflow-x-auto">
@@ -56,3 +87,5 @@
         </table>
     </div>
 </div>
+
+{% include 'includes/htmx_pagination.html' %}
