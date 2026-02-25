@@ -1,0 +1,242 @@
+<!-- Stat Cards -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="card p-4">
+        <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Overdue Vaccinations</p>
+        <p class="mt-1 text-2xl font-bold {% if stat_overdue_vax > 0 %}text-red-600{% else %}text-slate-900{% endif %}">{{ stat_overdue_vax }}</p>
+    </div>
+    <div class="card p-4">
+        <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Farrier Due</p>
+        <p class="mt-1 text-2xl font-bold {% if stat_due_farrier > 0 %}text-amber-600{% else %}text-slate-900{% endif %}">{{ stat_due_farrier }}</p>
+    </div>
+    <div class="card p-4">
+        <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">Vet Follow-ups</p>
+        <p class="mt-1 text-2xl font-bold {% if stat_vet_followups > 0 %}text-amber-600{% else %}text-slate-900{% endif %}">{{ stat_vet_followups }}</p>
+    </div>
+    <div class="card p-4">
+        <p class="text-xs font-medium text-slate-500 uppercase tracking-wide">High Egg Counts</p>
+        <p class="mt-1 text-2xl font-bold {% if stat_high_eggs > 0 %}text-red-600{% else %}text-slate-900{% endif %}">{{ stat_high_eggs }}</p>
+    </div>
+</div>
+
+<!-- Needs Attention -->
+<div class="space-y-6">
+
+    <!-- Overdue Vaccinations -->
+    {% if overdue_vaccinations %}
+    <div class="card overflow-hidden">
+        <div class="section-header">
+            <h2 class="section-title">Overdue Vaccinations</h2>
+            <span class="badge-danger">{{ overdue_vaccinations|length }}</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Horse</th>
+                        <th>Type</th>
+                        <th>Date Given</th>
+                        <th>Was Due</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vax in overdue_vaccinations %}
+                    <tr>
+                        <td><a href="{% url 'horse_detail' vax.horse.pk %}" class="link">{{ vax.horse.name }}</a></td>
+                        <td>{{ vax.vaccination_type.name }}</td>
+                        <td class="text-slate-500">{{ vax.date_given }}</td>
+                        <td class="text-red-600 font-semibold">{{ vax.next_due_date }}</td>
+                        <td><a href="{% url 'vaccination_create' %}?horse={{ vax.horse.pk }}" class="btn-ghost btn-xs">Re-vaccinate</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Due Soon Vaccinations -->
+    {% if due_vaccinations %}
+    <div class="card overflow-hidden">
+        <div class="section-header">
+            <h2 class="section-title">Vaccinations Due Soon</h2>
+            <span class="badge-warning">{{ due_vaccinations|length }}</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Horse</th>
+                        <th>Type</th>
+                        <th>Due Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for vax in due_vaccinations %}
+                    <tr>
+                        <td><a href="{% url 'horse_detail' vax.horse.pk %}" class="link">{{ vax.horse.name }}</a></td>
+                        <td>{{ vax.vaccination_type.name }}</td>
+                        <td class="text-amber-600">{{ vax.next_due_date }}</td>
+                        <td><a href="{% url 'vaccination_create' %}?horse={{ vax.horse.pk }}" class="btn-ghost btn-xs">Re-vaccinate</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Overdue/Due Farrier -->
+    {% if overdue_farrier or due_farrier %}
+    <div class="card overflow-hidden">
+        <div class="section-header">
+            <h2 class="section-title">Farrier Due</h2>
+            <span class="badge-warning">{{ overdue_farrier|length|add:due_farrier|length }}</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Horse</th>
+                        <th>Last Visit</th>
+                        <th>Due Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for visit in overdue_farrier %}
+                    <tr>
+                        <td><a href="{% url 'horse_detail' visit.horse.pk %}" class="link">{{ visit.horse.name }}</a></td>
+                        <td class="text-slate-500">{{ visit.date }}</td>
+                        <td class="text-red-600 font-semibold">{{ visit.next_due_date }}</td>
+                        <td><span class="badge-danger">Overdue</span></td>
+                        <td><a href="{% url 'farrier_create' %}?horse={{ visit.horse.pk }}" class="btn-ghost btn-xs">Book</a></td>
+                    </tr>
+                    {% endfor %}
+                    {% for visit in due_farrier %}
+                    <tr>
+                        <td><a href="{% url 'horse_detail' visit.horse.pk %}" class="link">{{ visit.horse.name }}</a></td>
+                        <td class="text-slate-500">{{ visit.date }}</td>
+                        <td class="text-amber-600">{{ visit.next_due_date }}</td>
+                        <td><span class="badge-warning">Due Soon</span></td>
+                        <td><a href="{% url 'farrier_create' %}?horse={{ visit.horse.pk }}" class="btn-ghost btn-xs">Book</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Vet Follow-ups -->
+    {% if vet_followups %}
+    <div class="card overflow-hidden">
+        <div class="section-header">
+            <h2 class="section-title">Vet Follow-ups</h2>
+            <span class="badge-warning">{{ vet_followups|length }}</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Horse</th>
+                        <th>Reason</th>
+                        <th>Visit Date</th>
+                        <th>Follow-up</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for v in vet_followups %}
+                    <tr>
+                        <td><a href="{% url 'horse_detail' v.horse.pk %}" class="link">{{ v.horse.name }}</a></td>
+                        <td>{{ v.reason|truncatewords:8 }}</td>
+                        <td class="text-slate-500">{{ v.date }}</td>
+                        <td class="{% if v.follow_up_date < today %}text-red-600 font-semibold{% else %}text-amber-600{% endif %}">{{ v.follow_up_date }}</td>
+                        <td><a href="{% url 'vet_visit_create' %}?horse={{ v.horse.pk }}" class="btn-ghost btn-xs">New Visit</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- High Egg Counts -->
+    {% if high_egg_counts %}
+    <div class="card overflow-hidden">
+        <div class="section-header">
+            <h2 class="section-title">High Egg Counts (last 90 days)</h2>
+            <span class="badge-danger">{{ high_egg_counts|length }}</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Horse</th>
+                        <th>Date</th>
+                        <th>Count (EPG)</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ec in high_egg_counts %}
+                    <tr>
+                        <td><a href="{% url 'horse_detail' ec.horse.pk %}" class="link">{{ ec.horse.name }}</a></td>
+                        <td class="text-slate-500">{{ ec.date }}</td>
+                        <td class="text-red-600 font-semibold">{{ ec.count }}</td>
+                        <td><a href="{% url 'worming_create' %}?horse={{ ec.horse.pk }}" class="btn-ghost btn-xs">Record Worming</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Active Conditions -->
+    {% if active_conditions %}
+    <div class="card overflow-hidden">
+        <div class="section-header">
+            <h2 class="section-title">Active Conditions</h2>
+            <span class="badge-danger">{{ active_conditions|length }}</span>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Horse</th>
+                        <th>Condition</th>
+                        <th>Diagnosed</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for c in active_conditions %}
+                    <tr>
+                        <td><a href="{% url 'horse_detail' c.horse.pk %}" class="link">{{ c.horse.name }}</a></td>
+                        <td>{{ c.name }}</td>
+                        <td class="text-slate-500">{{ c.diagnosed_date|default:"-" }}</td>
+                        <td><a href="{% url 'condition_update' c.pk %}" class="btn-ghost btn-xs">Edit</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if not overdue_vaccinations and not due_vaccinations and not overdue_farrier and not due_farrier and not vet_followups and not high_egg_counts and not active_conditions %}
+    <div class="card">
+        <div class="px-5 py-12 text-center">
+            <svg class="mx-auto h-12 w-12 text-green-400" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <p class="mt-3 text-sm font-medium text-slate-600">All clear! No overdue or upcoming health items.</p>
+        </div>
+    </div>
+    {% endif %}
+
+</div>

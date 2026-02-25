@@ -81,6 +81,9 @@ input[type="file"] { @apply block w-full text-sm text-slate-500 file:mr-3 file:r
 }
 .page-enter { animation: page-in 0.2s ease-out both; }
 
+/* Alpine.js cloak — hide until Alpine initialises */
+[x-cloak] { display: none !important; }
+
 /* Nav click feedback */
 .nav-link.htmx-request,
 .nav-link-active.htmx-request { @apply opacity-60; }

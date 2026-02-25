@@ -3,7 +3,7 @@
 {% block title %}{{ location.name }} - Cgate{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
+<div class="space-y-6" x-data="bulkActions()">
 
     <!-- Page Header -->
     <div class="page-header">
@@ -65,6 +65,9 @@
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th class="w-10">
+                            <input type="checkbox" data-select-all @change="toggleAll($event)" class="form-checkbox rounded">
+                        </th>
                         <th>Name</th>
                         <th>Details</th>
                         <th>Owner</th>
@@ -74,6 +77,14 @@
                 <tbody>
                     {% for horse in horses %}
                     <tr>
+                        <td>
+                            <input type="checkbox"
+                                   data-horse-checkbox
+                                   value="{{ horse.pk }}"
+                                   @change="toggleHorse({{ horse.pk }})"
+                                   :checked="isSelected({{ horse.pk }})"
+                                   class="form-checkbox rounded">
+                        </td>
                         <td>
                             <a href="{% url 'horse_detail' horse.pk %}" class="link font-medium">
                                 {{ horse.name }}
@@ -104,13 +115,16 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="4" class="text-center text-slate-400 py-8">No horses at this location</td>
+                        <td colspan="5" class="text-center text-slate-400 py-8">No horses at this location</td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
+
+    <!-- Bulk Action Bar -->
+    {% include 'health/partials/bulk_action_bar.html' %}
 
 </div>
 {% endblock %}

@@ -161,6 +161,95 @@ class VetVisitForm(forms.ModelForm):
         return cleaned_data
 
 
+# ─── Bulk Forms (no horse field) ──────────────────────────────────────
+
+class BulkVaccinationForm(forms.ModelForm):
+    class Meta:
+        model = Vaccination
+        fields = ['vaccination_type', 'date_given', 'next_due_date', 'vet_name', 'batch_number', 'notes']
+        widgets = {
+            'vaccination_type': forms.Select(attrs={'class': 'form-select'}),
+            'date_given': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'next_due_date': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'vet_name': forms.TextInput(attrs={'class': 'form-input'}),
+            'batch_number': forms.TextInput(attrs={'class': 'form-input'}),
+            'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 2}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['next_due_date'].required = False
+
+
+class BulkFarrierVisitForm(forms.ModelForm):
+    class Meta:
+        model = FarrierVisit
+        fields = ['date', 'service_provider', 'work_done', 'next_due_date', 'cost', 'notes']
+        widgets = {
+            'date': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'service_provider': forms.Select(attrs={'class': 'form-select'}),
+            'work_done': forms.Select(attrs={'class': 'form-select'}),
+            'next_due_date': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'cost': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01'}),
+            'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 2}),
+        }
+
+
+class BulkWormingTreatmentForm(forms.ModelForm):
+    class Meta:
+        model = WormingTreatment
+        fields = ['date', 'product_name', 'active_ingredient', 'dose', 'administered_by', 'notes']
+        widgets = {
+            'date': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'product_name': forms.TextInput(attrs={'class': 'form-input'}),
+            'active_ingredient': forms.TextInput(attrs={'class': 'form-input'}),
+            'dose': forms.TextInput(attrs={'class': 'form-input'}),
+            'administered_by': forms.TextInput(attrs={'class': 'form-input'}),
+            'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 2}),
+        }
+
+
+class BulkWormEggCountForm(forms.ModelForm):
+    class Meta:
+        model = WormEggCount
+        fields = ['date', 'count', 'lab_name', 'sample_type', 'notes']
+        widgets = {
+            'date': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'count': forms.NumberInput(attrs={'class': 'form-input'}),
+            'lab_name': forms.TextInput(attrs={'class': 'form-input'}),
+            'sample_type': forms.Select(attrs={'class': 'form-select'}),
+            'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 2}),
+        }
+
+
+class BulkVetVisitForm(forms.ModelForm):
+    class Meta:
+        model = VetVisit
+        fields = ['date', 'vet', 'reason', 'diagnosis', 'treatment', 'follow_up_date', 'cost', 'notes']
+        widgets = {
+            'date': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'vet': forms.Select(attrs={'class': 'form-select'}),
+            'reason': forms.TextInput(attrs={'class': 'form-input'}),
+            'diagnosis': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 2}),
+            'treatment': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 2}),
+            'follow_up_date': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'cost': forms.NumberInput(attrs={'class': 'form-input', 'step': '0.01'}),
+            'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 2}),
+        }
+
+
+class BulkMedicalConditionForm(forms.ModelForm):
+    class Meta:
+        model = MedicalCondition
+        fields = ['name', 'diagnosed_date', 'status', 'notes']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-input'}),
+            'diagnosed_date': forms.DateInput(attrs={'class': 'form-input', 'type': 'date'}),
+            'status': forms.Select(attrs={'class': 'form-select'}),
+            'notes': forms.Textarea(attrs={'class': 'form-textarea', 'rows': 2}),
+        }
+
+
 class BreedingRecordForm(forms.ModelForm):
     class Meta:
         model = BreedingRecord

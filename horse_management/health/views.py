@@ -3,13 +3,17 @@ Views for health app.
 """
 
 from datetime import timedelta
+from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.db import transaction
 from django.db.models import Q
-from django.shortcuts import get_object_or_404, redirect
-from django.urls import reverse_lazy
+from django.http import HttpResponse, HttpResponseBadRequest
+from django.shortcuts import get_object_or_404, redirect, render
+from django.template.loader import render_to_string
+from django.urls import reverse, reverse_lazy
 from django.utils import timezone
 from django.views.generic import CreateView, DetailView, ListView, UpdateView
 
@@ -18,6 +22,12 @@ from core.models import Horse
 
 from .forms import (
     BreedingRecordForm,
+    BulkFarrierVisitForm,
+    BulkMedicalConditionForm,
+    BulkVaccinationForm,
+    BulkVetVisitForm,
+    BulkWormEggCountForm,
+    BulkWormingTreatmentForm,
     FarrierVisitForm,
     MedicalConditionForm,
     VaccinationForm,
@@ -36,6 +46,311 @@ from .models import (
     WormEggCount,
     WormingTreatment,
 )
+
+
+# ─── Health Dashboard ────────────────────────────────────────────────
+
+HEALTH_TABS = [
+    ('overview', 'Overview'),
+    ('vaccinations', 'Vaccinations'),
+    ('farrier', 'Farrier'),
+    ('worming', 'Worming'),
+    ('egg_counts', 'Egg Counts'),
+    ('conditions', 'Conditions'),
+    ('vet_visits', 'Vet Visits'),
+]
+
+
+@login_required
+def health_dashboard(request):
+    tab = request.GET.get('type', 'overview')
+    today = timezone.now().date()
+    is_htmx = request.headers.get('HX-Request') == 'true'
+
+    context = {
+        'tabs': HEALTH_TABS,
+        'active_tab': tab,
+        'today': today,
+    }
+
+    if tab == 'overview':
+        thirty_days = today + timedelta(days=30)
+
+        # Overdue vaccinations
+        overdue_vaccinations = Vaccination.objects.select_related(
+            'horse', 'vaccination_type'
+        ).filter(horse__is_active=True, next_due_date__lt=today).order_by('next_due_date')
+
+        # Due soon vaccinations
+        due_vaccinations = Vaccination.objects.select_related(
+            'horse', 'vaccination_type'
+        ).filter(
+            horse__is_active=True,
+            next_due_date__gte=today,
+            next_due_date__lte=thirty_days,
+        ).order_by('next_due_date')
+
+        # Overdue farrier
+        overdue_farrier = FarrierVisit.objects.select_related(
+            'horse', 'service_provider'
+        ).filter(
+            horse__is_active=True,
+            next_due_date__isnull=False,
+            next_due_date__lt=today,
+        ).order_by('next_due_date')
+
+        # Due soon farrier
+        two_weeks = today + timedelta(days=14)
+        due_farrier = FarrierVisit.objects.select_related(
+            'horse', 'service_provider'
+        ).filter(
+            horse__is_active=True,
+            next_due_date__gte=today,
+            next_due_date__lte=two_weeks,
+        ).order_by('next_due_date')
+
+        # Vet follow-ups
+        vet_followups = VetVisit.objects.select_related(
+            'horse', 'vet'
+        ).filter(
+            horse__is_active=True,
+            follow_up_date__isnull=False,
+            follow_up_date__lte=thirty_days,
+        ).order_by('follow_up_date')
+
+        # High egg counts (last 90 days)
+        high_egg_counts = WormEggCount.objects.select_related('horse').filter(
+            horse__is_active=True,
+            date__gte=today - timedelta(days=90),
+            count__gt=200,
+        ).order_by('-date')
+
+        # Active conditions
+        active_conditions = MedicalCondition.objects.select_related('horse').filter(
+            horse__is_active=True,
+            status='active',
+        ).order_by('-created_at')[:10]
+
+        context.update({
+            'overdue_vaccinations': overdue_vaccinations,
+            'due_vaccinations': due_vaccinations,
+            'overdue_farrier': overdue_farrier,
+            'due_farrier': due_farrier,
+            'vet_followups': vet_followups,
+            'high_egg_counts': high_egg_counts,
+            'active_conditions': active_conditions,
+            'stat_overdue_vax': overdue_vaccinations.count(),
+            'stat_due_farrier': overdue_farrier.count() + due_farrier.count(),
+            'stat_vet_followups': vet_followups.count(),
+            'stat_high_eggs': high_egg_counts.count(),
+        })
+
+    elif tab == 'vaccinations':
+        queryset = Vaccination.objects.select_related(
+            'horse', 'vaccination_type'
+        ).filter(horse__is_active=True)
+        status = request.GET.get('status')
+        if status == 'due':
+            queryset = queryset.filter(
+                next_due_date__lte=today + timedelta(days=30),
+                next_due_date__gte=today,
+            )
+        elif status == 'overdue':
+            queryset = queryset.filter(next_due_date__lt=today)
+        horse = request.GET.get('horse')
+        if horse:
+            queryset = queryset.filter(horse_id=horse)
+        context['vaccinations'] = queryset.order_by('next_due_date')[:100]
+        context['horses'] = Horse.objects.filter(is_active=True)
+
+    elif tab == 'farrier':
+        queryset = FarrierVisit.objects.select_related(
+            'horse', 'service_provider'
+        ).filter(horse__is_active=True)
+        status = request.GET.get('status')
+        if status == 'due':
+            queryset = queryset.filter(
+                next_due_date__lte=today + timedelta(days=14),
+                next_due_date__gte=today,
+            )
+        elif status == 'overdue':
+            queryset = queryset.filter(next_due_date__lt=today)
+        horse = request.GET.get('horse')
+        if horse:
+            queryset = queryset.filter(horse_id=horse)
+        context['visits'] = queryset.order_by('-date')[:100]
+        context['horses'] = Horse.objects.filter(is_active=True)
+
+    elif tab == 'worming':
+        queryset = WormingTreatment.objects.select_related('horse').filter(
+            horse__is_active=True
+        )
+        horse = request.GET.get('horse')
+        if horse:
+            queryset = queryset.filter(horse_id=horse)
+        context['treatments'] = queryset.order_by('-date')[:100]
+        context['horses'] = Horse.objects.filter(is_active=True)
+
+    elif tab == 'egg_counts':
+        queryset = WormEggCount.objects.select_related('horse').filter(
+            horse__is_active=True
+        )
+        horse = request.GET.get('horse')
+        if horse:
+            queryset = queryset.filter(horse_id=horse)
+        context['egg_counts'] = queryset.order_by('-date')[:100]
+        context['horses'] = Horse.objects.filter(is_active=True)
+
+    elif tab == 'conditions':
+        queryset = MedicalCondition.objects.select_related('horse').filter(
+            horse__is_active=True
+        )
+        horse = request.GET.get('horse')
+        if horse:
+            queryset = queryset.filter(horse_id=horse)
+        status = request.GET.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+        context['conditions'] = queryset[:100]
+        context['horses'] = Horse.objects.filter(is_active=True)
+
+    elif tab == 'vet_visits':
+        queryset = VetVisit.objects.select_related('horse', 'vet').filter(
+            horse__is_active=True
+        )
+        horse = request.GET.get('horse')
+        if horse:
+            queryset = queryset.filter(horse_id=horse)
+        context['vet_visits'] = queryset.order_by('-date')[:100]
+        context['horses'] = Horse.objects.filter(is_active=True)
+
+    if is_htmx:
+        template = f'health/partials/{tab}_content.html'
+        return render(request, template, context)
+
+    return render(request, 'health/health_dashboard.html', context)
+
+
+# ─── Bulk Health Actions ─────────────────────────────────────────────
+
+BULK_FORM_MAP = {
+    'vaccination': BulkVaccinationForm,
+    'farrier': BulkFarrierVisitForm,
+    'worming': BulkWormingTreatmentForm,
+    'egg_count': BulkWormEggCountForm,
+    'vet_visit': BulkVetVisitForm,
+    'condition': BulkMedicalConditionForm,
+}
+
+BULK_MODEL_MAP = {
+    'vaccination': Vaccination,
+    'farrier': FarrierVisit,
+    'worming': WormingTreatment,
+    'egg_count': WormEggCount,
+    'vet_visit': VetVisit,
+    'condition': MedicalCondition,
+}
+
+BULK_LABELS = {
+    'vaccination': 'Vaccination',
+    'farrier': 'Farrier Visit',
+    'worming': 'Worming Treatment',
+    'egg_count': 'Egg Count',
+    'vet_visit': 'Vet Visit',
+    'condition': 'Medical Condition',
+}
+
+
+@login_required
+def bulk_health_form(request):
+    action_type = request.GET.get('action_type', '')
+    form_class = BULK_FORM_MAP.get(action_type)
+    if not form_class:
+        return HttpResponseBadRequest('Invalid action type')
+
+    form = form_class(initial={'date': timezone.now().date()} if 'date' in [f.name for f in form_class.Meta.model._meta.get_fields()] else {})
+    # Set initial date for vaccination (field is date_given)
+    if action_type == 'vaccination':
+        form = form_class(initial={'date_given': timezone.now().date()})
+
+    return render(request, 'health/partials/bulk_health_form.html', {
+        'form': form,
+        'action_type': action_type,
+        'action_label': BULK_LABELS.get(action_type, action_type),
+    })
+
+
+@login_required
+def bulk_health_apply(request):
+    if request.method != 'POST':
+        return HttpResponseBadRequest('POST required')
+
+    action_type = request.POST.get('action_type', '')
+    horse_ids = request.POST.getlist('horse_ids')
+    form_class = BULK_FORM_MAP.get(action_type)
+
+    if not form_class or not horse_ids:
+        return HttpResponseBadRequest('Invalid request')
+
+    form = form_class(request.POST)
+    if not form.is_valid():
+        return render(request, 'health/partials/bulk_health_form.html', {
+            'form': form,
+            'action_type': action_type,
+            'action_label': BULK_LABELS.get(action_type, action_type),
+        })
+
+    horses = Horse.objects.filter(pk__in=horse_ids, is_active=True)
+    count = 0
+
+    with transaction.atomic():
+        for horse in horses:
+            obj = form.save(commit=False)
+            obj.pk = None
+            obj.horse = horse
+            obj.save()
+
+            # Create ExtraCharge for farrier visits with cost > 0
+            if action_type == 'farrier' and form.cleaned_data.get('cost', 0) > 0:
+                owner = horse.current_owner
+                if owner:
+                    charge = ExtraCharge.objects.create(
+                        horse=horse,
+                        owner=owner,
+                        service_provider=obj.service_provider,
+                        charge_type='farrier',
+                        date=obj.date,
+                        description=f"Farrier - {obj.get_work_done_display()}",
+                        amount=obj.cost,
+                    )
+                    obj.extra_charge = charge
+                    obj.save()
+
+            # Create ExtraCharge for vet visits with cost > 0
+            if action_type == 'vet_visit' and form.cleaned_data.get('cost', 0) > 0:
+                owner = horse.current_owner
+                if owner:
+                    charge = ExtraCharge.objects.create(
+                        horse=horse,
+                        owner=owner,
+                        service_provider=obj.vet,
+                        charge_type='vet',
+                        date=obj.date,
+                        description=f"Vet - {obj.reason[:200]}",
+                        amount=obj.cost,
+                    )
+                    obj.extra_charge = charge
+                    obj.save()
+
+            count += 1
+
+    label = BULK_LABELS.get(action_type, action_type)
+    messages.success(request, f"{label} recorded for {count} horse{'s' if count != 1 else ''}.")
+
+    # Return HX-Trigger to close modal and refresh page
+    response = HttpResponse(status=204)
+    response['HX-Trigger'] = 'bulkActionComplete'
+    return response
 
 
 # ─── Vaccination Views ───────────────────────────────────────────────
@@ -82,7 +397,9 @@ class VaccinationCreateView(LoginRequiredMixin, CreateView):
     model = Vaccination
     form_class = VaccinationForm
     template_name = 'health/vaccination_form.html'
-    success_url = reverse_lazy('vaccination_list')
+
+    def get_success_url(self):
+        return reverse('health_dashboard') + '?type=vaccinations'
 
     def get_initial(self):
         initial = super().get_initial()
@@ -101,7 +418,9 @@ class VaccinationUpdateView(LoginRequiredMixin, UpdateView):
     model = Vaccination
     form_class = VaccinationForm
     template_name = 'health/vaccination_form.html'
-    success_url = reverse_lazy('vaccination_list')
+
+    def get_success_url(self):
+        return reverse('health_dashboard') + '?type=vaccinations'
 
 
 # ─── Vaccination Type Views ──────────────────────────────────────────
@@ -188,7 +507,9 @@ class FarrierCreateView(LoginRequiredMixin, CreateView):
     model = FarrierVisit
     form_class = FarrierVisitForm
     template_name = 'health/farrier_form.html'
-    success_url = reverse_lazy('farrier_list')
+
+    def get_success_url(self):
+        return reverse('health_dashboard') + '?type=farrier'
 
     def get_initial(self):
         initial = super().get_initial()
@@ -227,7 +548,9 @@ class FarrierUpdateView(LoginRequiredMixin, UpdateView):
     model = FarrierVisit
     form_class = FarrierVisitForm
     template_name = 'health/farrier_form.html'
-    success_url = reverse_lazy('farrier_list')
+
+    def get_success_url(self):
+        return reverse('health_dashboard') + '?type=farrier'
 
     def form_valid(self, form):
         response = super().form_valid(form)
@@ -272,7 +595,9 @@ class WormingCreateView(LoginRequiredMixin, CreateView):
     model = WormingTreatment
     form_class = WormingTreatmentForm
     template_name = 'health/worming_form.html'
-    success_url = reverse_lazy('worming_list')
+
+    def get_success_url(self):
+        return reverse('health_dashboard') + '?type=worming'
 
     def get_initial(self):
         initial = super().get_initial()
@@ -291,7 +616,9 @@ class WormingUpdateView(LoginRequiredMixin, UpdateView):
     model = WormingTreatment
     form_class = WormingTreatmentForm
     template_name = 'health/worming_form.html'
-    success_url = reverse_lazy('worming_list')
+
+    def get_success_url(self):
+        return reverse('health_dashboard') + '?type=worming'
 
 
 # ─── Worm Egg Count Views ────────────────────────────────────────────
@@ -321,7 +648,9 @@ class WormEggCountCreateView(LoginRequiredMixin, CreateView):
     model = WormEggCount
     form_class = WormEggCountForm
     template_name = 'health/egg_count_form.html'
-    success_url = reverse_lazy('egg_count_list')
+
+    def get_success_url(self):
+        return reverse('health_dashboard') + '?type=egg_counts'
 
     def get_initial(self):
         initial = super().get_initial()
@@ -340,7 +669,9 @@ class WormEggCountUpdateView(LoginRequiredMixin, UpdateView):
     model = WormEggCount
     form_class = WormEggCountForm
     template_name = 'health/egg_count_form.html'
-    success_url = reverse_lazy('egg_count_list')
+
+    def get_success_url(self):
+        return reverse('health_dashboard') + '?type=egg_counts'
 
 
 # ─── Medical Condition Views ─────────────────────────────────────────
@@ -373,7 +704,9 @@ class MedicalConditionCreateView(LoginRequiredMixin, CreateView):
     model = MedicalCondition
     form_class = MedicalConditionForm
     template_name = 'health/condition_form.html'
-    success_url = reverse_lazy('condition_list')
+
+    def get_success_url(self):
+        return reverse('health_dashboard') + '?type=conditions'
 
     def get_initial(self):
         initial = super().get_initial()
@@ -391,7 +724,9 @@ class MedicalConditionUpdateView(LoginRequiredMixin, UpdateView):
     model = MedicalCondition
     form_class = MedicalConditionForm
     template_name = 'health/condition_form.html'
-    success_url = reverse_lazy('condition_list')
+
+    def get_success_url(self):
+        return reverse('health_dashboard') + '?type=conditions'
 
 
 # ─── Vet Visit Views ─────────────────────────────────────────────────
@@ -421,7 +756,9 @@ class VetVisitCreateView(LoginRequiredMixin, CreateView):
     model = VetVisit
     form_class = VetVisitForm
     template_name = 'health/vet_visit_form.html'
-    success_url = reverse_lazy('vet_visit_list')
+
+    def get_success_url(self):
+        return reverse('health_dashboard') + '?type=vet_visits'
 
     def get_initial(self):
         initial = super().get_initial()
@@ -460,7 +797,9 @@ class VetVisitUpdateView(LoginRequiredMixin, UpdateView):
     model = VetVisit
     form_class = VetVisitForm
     template_name = 'health/vet_visit_form.html'
-    success_url = reverse_lazy('vet_visit_list')
+
+    def get_success_url(self):
+        return reverse('health_dashboard') + '?type=vet_visits'
 
     def form_valid(self, form):
         response = super().form_valid(form)

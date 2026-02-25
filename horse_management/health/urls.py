@@ -7,6 +7,13 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Health Dashboard
+    path('', views.health_dashboard, name='health_dashboard'),
+
+    # Bulk Actions
+    path('bulk/form/', views.bulk_health_form, name='bulk_health_form'),
+    path('bulk/apply/', views.bulk_health_apply, name='bulk_health_apply'),
+
     # Vaccinations
     path('vaccinations/', views.VaccinationListView.as_view(), name='vaccination_list'),
     path('vaccinations/add/', views.VaccinationCreateView.as_view(), name='vaccination_create'),

@@ -1,0 +1,64 @@
+<!-- Header + Add Button -->
+<div class="flex items-center justify-between mb-4">
+    <div></div>
+    <a href="{% url 'vet_visit_create' %}" class="btn-primary">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+        </svg>
+        Add Vet Visit
+    </a>
+</div>
+
+<!-- Vet Visit Table -->
+<div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Horse</th>
+                    <th>Date</th>
+                    <th>Reason</th>
+                    <th>Vet</th>
+                    <th>Follow-up</th>
+                    <th class="text-right">Cost</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for v in vet_visits %}
+                <tr>
+                    <td>
+                        <a href="{% url 'horse_detail' v.horse.pk %}" class="link">{{ v.horse.name }}</a>
+                    </td>
+                    <td class="text-slate-500">{{ v.date }}</td>
+                    <td>{{ v.reason|truncatewords:10 }}</td>
+                    <td class="text-slate-500">{% if v.vet %}{{ v.vet.name }}{% else %}<span class="text-slate-400">-</span>{% endif %}</td>
+                    <td class="{% if v.follow_up_date %}text-amber-600{% else %}text-slate-500{% endif %}">
+                        {{ v.follow_up_date|default:"-" }}
+                    </td>
+                    <td class="text-right">
+                        &pound;{{ v.cost|floatformat:2 }}
+                    </td>
+                    <td>
+                        <a href="{% url 'vet_visit_update' v.pk %}" class="btn-ghost btn-xs">Edit</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="7">
+                        <div class="py-12 text-center">
+                            <p class="text-sm font-medium text-slate-500">No vet visits recorded</p>
+                            <a href="{% url 'vet_visit_create' %}" class="btn-primary mt-4 inline-flex">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                                </svg>
+                                Add your first vet visit
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

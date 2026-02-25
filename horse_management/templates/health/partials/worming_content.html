@@ -1,0 +1,58 @@
+<!-- Header + Add Button -->
+<div class="flex items-center justify-between mb-4">
+    <div></div>
+    <a href="{% url 'worming_create' %}" class="btn-primary">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+        </svg>
+        Add Treatment
+    </a>
+</div>
+
+<!-- Worming Treatment Table -->
+<div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Horse</th>
+                    <th>Date</th>
+                    <th>Product</th>
+                    <th>Active Ingredient</th>
+                    <th>Administered By</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in treatments %}
+                <tr>
+                    <td>
+                        <a href="{% url 'horse_detail' t.horse.pk %}" class="link">{{ t.horse.name }}</a>
+                    </td>
+                    <td class="text-slate-500">{{ t.date }}</td>
+                    <td>{{ t.product_name }}</td>
+                    <td class="text-slate-500">{{ t.active_ingredient|default:"-" }}</td>
+                    <td class="text-slate-500">{{ t.administered_by|default:"-" }}</td>
+                    <td>
+                        <a href="{% url 'worming_update' t.pk %}" class="btn-ghost btn-xs">Edit</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6">
+                        <div class="py-12 text-center">
+                            <p class="text-sm font-medium text-slate-500">No worming treatments recorded</p>
+                            <a href="{% url 'worming_create' %}" class="btn-primary mt-4 inline-flex">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                                </svg>
+                                Add your first treatment
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

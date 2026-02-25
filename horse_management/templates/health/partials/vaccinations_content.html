@@ -1,0 +1,71 @@
+<!-- Header + Add Button -->
+<div class="flex items-center justify-between mb-4">
+    <div></div>
+    <a href="{% url 'vaccination_create' %}" class="btn-primary">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+        </svg>
+        Add Vaccination
+    </a>
+</div>
+
+<!-- Vaccination Table -->
+<div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Horse</th>
+                    <th>Type</th>
+                    <th>Date Given</th>
+                    <th>Next Due</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for vax in vaccinations %}
+                <tr>
+                    <td>
+                        <a href="{% url 'horse_detail' vax.horse.pk %}" class="link">{{ vax.horse.name }}</a>
+                    </td>
+                    <td>{{ vax.vaccination_type.name }}</td>
+                    <td class="text-slate-500">{{ vax.date_given }}</td>
+                    <td class="{% if vax.next_due_date and vax.next_due_date < today %}text-red-600 font-semibold{% elif vax.is_due_soon %}text-amber-600{% else %}text-slate-500{% endif %}">
+                        {{ vax.next_due_date }}
+                    </td>
+                    <td>
+                        {% if vax.next_due_date and vax.next_due_date < today %}
+                        <span class="badge-danger">Overdue</span>
+                        {% elif vax.is_due_soon %}
+                        <span class="badge-warning">Due Soon</span>
+                        {% else %}
+                        <span class="badge-success">OK</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="flex items-center gap-1">
+                            <a href="{% url 'vaccination_update' vax.pk %}" class="btn-ghost btn-xs">Edit</a>
+                            <a href="{% url 'vaccination_create' %}?horse={{ vax.horse.pk }}" class="btn-ghost btn-xs">Re-vaccinate</a>
+                        </div>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="6">
+                        <div class="py-12 text-center">
+                            <p class="text-sm font-medium text-slate-500">No vaccination records found</p>
+                            <a href="{% url 'vaccination_create' %}" class="btn-primary mt-4 inline-flex">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                                </svg>
+                                Add your first vaccination
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

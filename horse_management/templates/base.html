@@ -79,38 +79,10 @@
                 <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5"/></svg>
                 Placements
             </a>
-
-            <!-- Health -->
-            <div class="nav-group-label">Health</div>
-            <a href="{% url 'vaccination_list' %}"
-               class="{% if request.resolver_match.url_name in 'vaccination_list,vaccination_create,vaccination_update' %}nav-link-active{% else %}nav-link{% endif %}">
-                <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5"/></svg>
-                Vaccinations
-            </a>
-            <a href="{% url 'farrier_list' %}"
-               class="{% if request.resolver_match.url_name in 'farrier_list,farrier_create,farrier_update' %}nav-link-active{% else %}nav-link{% endif %}">
-                <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17l-5.648 3.203a.75.75 0 01-1.088-.791l1.078-6.29-4.57-4.454a.75.75 0 01.416-1.28l6.317-.917L11.11 0 12 2.25l.89-2.25 3.183 4.902 6.317.917a.75.75 0 01.416 1.28l-4.57 4.454 1.078 6.29a.75.75 0 01-1.088.791L12 15.17z"/></svg>
-                Farrier
-            </a>
-            <a href="{% url 'worming_list' %}"
-               class="{% if request.resolver_match.url_name in 'worming_list,worming_create,worming_update' %}nav-link-active{% else %}nav-link{% endif %}">
-                <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3"/></svg>
-                Worming
-            </a>
-            <a href="{% url 'egg_count_list' %}"
-               class="{% if request.resolver_match.url_name in 'egg_count_list,egg_count_create,egg_count_update' %}nav-link-active{% else %}nav-link{% endif %}">
-                <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/></svg>
-                Egg Counts
-            </a>
-            <a href="{% url 'condition_list' %}"
-               class="{% if request.resolver_match.url_name in 'condition_list,condition_create,condition_update' %}nav-link-active{% else %}nav-link{% endif %}">
+            <a href="{% url 'health_dashboard' %}"
+               class="{% if request.resolver_match.url_name in 'health_dashboard,vaccination_list,vaccination_create,vaccination_update,farrier_list,farrier_create,farrier_update,worming_list,worming_create,worming_update,egg_count_list,egg_count_create,egg_count_update,condition_list,condition_create,condition_update,vet_visit_list,vet_visit_create,vet_visit_update' %}nav-link-active{% else %}nav-link{% endif %}">
                 <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"/></svg>
-                Conditions
-            </a>
-            <a href="{% url 'vet_visit_list' %}"
-               class="{% if request.resolver_match.url_name in 'vet_visit_list,vet_visit_create,vet_visit_update' %}nav-link-active{% else %}nav-link{% endif %}">
-                <svg class="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                Vet Visits
+                Health
             </a>
             <a href="{% url 'breeding_list' %}"
                class="{% if request.resolver_match.url_name in 'breeding_list,breeding_create,breeding_update' %}nav-link-active{% else %}nav-link{% endif %}">

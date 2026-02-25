@@ -1,0 +1,64 @@
+<!-- Header + Add Button -->
+<div class="flex items-center justify-between mb-4">
+    <div></div>
+    <a href="{% url 'condition_create' %}" class="btn-primary">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+        </svg>
+        Add Condition
+    </a>
+</div>
+
+<!-- Condition Table -->
+<div class="card overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Horse</th>
+                    <th>Condition</th>
+                    <th>Diagnosed</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in conditions %}
+                <tr>
+                    <td>
+                        <a href="{% url 'horse_detail' c.horse.pk %}" class="link">{{ c.horse.name }}</a>
+                    </td>
+                    <td>{{ c.name }}</td>
+                    <td class="text-slate-500">{{ c.diagnosed_date|default:"-" }}</td>
+                    <td>
+                        {% if c.status == 'active' %}
+                        <span class="badge-danger">Active</span>
+                        {% elif c.status == 'monitoring' %}
+                        <span class="badge-warning">Monitoring</span>
+                        {% else %}
+                        <span class="badge-success">Resolved</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'condition_update' c.pk %}" class="btn-ghost btn-xs">Edit</a>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5">
+                        <div class="py-12 text-center">
+                            <p class="text-sm font-medium text-slate-500">No medical conditions recorded</p>
+                            <a href="{% url 'condition_create' %}" class="btn-primary mt-4 inline-flex">
+                                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+                                </svg>
+                                Add your first condition
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
