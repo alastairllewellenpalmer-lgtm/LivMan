@@ -32,5 +32,8 @@ media/
 Thumbs.db
 nul
 
+# Node
+node_modules/
+
 # Claude
 .claude/
